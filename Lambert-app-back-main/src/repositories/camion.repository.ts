@@ -1,5 +1,6 @@
 // src/repositories/camion.repository.ts
 import { pool } from '../../db';
+import logger from '../utils/logger';
 
 // Tipo para la lista de camiones 
 export interface CamionVerificado {
@@ -34,6 +35,11 @@ export interface ConfiguracionCamion {
   es_modificado?: boolean;
 }
 
+export interface CreateCamionResult {
+  message: string;
+  id: number;
+}
+
 export class CamionRepository {
 
   /**
@@ -50,9 +56,27 @@ export class CamionRepository {
       `;
       const result = await pool.query(query);
       return result.rows;
-    } catch (error) {
-      console.error("Error al buscar camiones verificados:", error);
+    } catch (error: unknown) {
+      logger.error("Error al buscar camiones verificados:", error);
       throw new Error("No se pudo obtener la lista de camiones.");
+    }
+  }
+
+  /**
+   * Busca un camión por su ID.
+   */
+  static async findById(id: number): Promise<CamionVerificado | null> {
+    try {
+      const result = await pool.query(
+        `SELECT id, marca_camion, modelo_camion, ano_camion, tipo_camion, estado_verificacion
+         FROM camion
+         WHERE id = $1`,
+        [id]
+      );
+      return result.rows[0] || null;
+    } catch (error: unknown) {
+      logger.error(`Error al buscar camión por ID ${id}:`, error);
+      throw new Error('Error al obtener el camión');
     }
   }
 
@@ -96,14 +120,43 @@ export class CamionRepository {
       
       return result.rows[0];
 
-    } catch (error) {
-      console.error(`Error al buscar configuración para el camión ID ${camionId}:`, error);
+    } catch (error: unknown) {
+      logger.error(`Error al buscar configuración para el camión ID ${camionId}:`, error);
       throw new Error("No se pudo obtener la configuración del camión.");
     }
   }
   // --- ¡NUEVA FUNCIÓN AÑADIDA! ---
 
-  static async create(nuevoCamion: NuevoCamion): Promise<any> {
+  static async tienePedidos(id: number): Promise<boolean> {
+    try {
+      const result = await pool.query(
+        `SELECT EXISTS(
+          SELECT 1 FROM pedido WHERE fk_id_camion = $1
+          UNION ALL
+          SELECT 1 FROM proyecto_modificado WHERE fk_id_camion = $1
+        )`,
+        [id]
+      );
+      return result.rows[0].exists;
+    } catch (error: unknown) {
+      logger.error(`Error al verificar pedidos del camión ID ${id}:`, error);
+      throw new Error('No se pudo verificar los pedidos del camión');
+    }
+  }
+
+  static async delete(id: number): Promise<void> {
+    const client = await pool.connect();
+    try {
+      await client.query('DELETE FROM camion WHERE id = $1', [id]);
+    } catch (error: unknown) {
+      logger.error(`Error al eliminar camión ID ${id}:`, error);
+      throw new Error('No se pudo eliminar el camión');
+    } finally {
+      client.release();
+    }
+  }
+
+  static async create(nuevoCamion: NuevoCamion): Promise<CreateCamionResult> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -153,9 +206,9 @@ export class CamionRepository {
       await client.query('COMMIT');
       return { message: 'Camión creado exitosamente', id: camionId };
 
-    } catch (error) {
+    } catch (error: unknown) {
       await client.query('ROLLBACK');
-      console.error("Error creando camión:", error);
+      logger.error("Error creando camión:", error);
       throw error;
     } finally {
       client.release();

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
+  <rect width="400" height="250" fill="#f4f6f8"/>
+  <line x1="50" y1="180" x2="350" y2="180" stroke="#333" stroke-width="4"/>
+  <circle cx="120" cy="190" r="15" fill="#333"/>
+  <circle cx="280" cy="190" r="15" fill="#333"/>
+  <text x="120" y="210" text-anchor="middle" font-family="Arial" font-size="9" fill="#333">Eje delantero</text>
+  <text x="280" y="210" text-anchor="middle" font-family="Arial" font-size="9" fill="#333">Eje trasero</text>
+  <line x1="200" y1="165" x2="200" y2="195" stroke="#159947" stroke-width="2"/>
+  <text x="200" y="155" text-anchor="middle" font-family="Arial" font-size="10" fill="#159947">Distancia entre ejes</text>
+  <line x1="280" y1="170" x2="320" y2="170" stroke="#da251d" stroke-width="3" marker-end="url(#arrow2)"/>
+  <text x="300" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#da251d" font-weight="bold">Desplazar</text>
+  <defs><marker id="arrow2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#da251d"/></marker></defs>
+</svg>

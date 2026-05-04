@@ -1,65 +1,99 @@
 <div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Mis pedidos'}]"></app-breadcrumb>
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="page-title mb-0">Mis Pedidos</h1>
-    <a routerLink="/formulario" class="btn btn-primary">
-      Nuevo Pedido
-    </a>
-  </div>
-
-  <div class="card">
-    <div class="card-body p-0">
-
-      @if (pedidos.length > 0) {
-
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>ID</th>
-                <th>Cliente</th>
-                <th>Camión</th>
-                <th>Estado</th>
-                <th>Entrega</th>
-                <th class="text-end">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              @for (pedido of pedidos; track pedido.id) {
-                <tr>
-                  <td>{{ pedido.id }}</td>
-                  <td>{{ pedido.cliente_razon_social }}</td>
-                  <td>{{ pedido.camion }}</td>
-                  <td>
-                    <span class="estado-badge">
-                      {{ pedido.estado }}
-                    </span>
-                  </td>
-                  <td>{{ pedido.fecha_entrega }}</td>
-                  <td class="text-end">
-                    <a
-                      class="btn btn-sm btn-secondary"
-                      [routerLink]="['/mis-pedidos', pedido.id]"
-                      [queryParams]="{ es_modificado: pedido.es_modificado }">
-                      Ver detalle
-                    </a>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-      } @else {
-
-        <div class="empty-state">
-          No hay pedidos registrados.
-        </div>
-
-      }
-
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- HEADER SUPERIOR                              -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="pedidos-header mb-4">
+    <div class="header-content">
+      <div class="header-info">
+        <h1 class="page-title mb-1">📋 Mis Pedidos</h1>
+        <p class="page-subtitle mb-0">Mostrando {{ filteredPedidos.length }} pedidos</p>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" (click)="exportarPDF()">📄 Exportar</button>
+        <a routerLink="/formulario" class="btn btn-primary btn-nueva">
+          + Nueva simulación
+        </a>
+      </div>
     </div>
   </div>
 
+  <!-- Search Bar -->
+  <div class="search-bar mb-3">
+    <input type="text" class="form-control search-input" placeholder="Buscar por cliente o camión..." [(ngModel)]="filtro" (input)="filtrar()">
+  </div>
+
+  <!-- Filter Chips -->
+  <div class="filter-chips mb-4">
+    <span class="filter-label">Estado:</span>
+    <button class="chip" [class.active]="filtroEstado === ''" (click)="filtrarPorEstado('')">Todos</button>
+    <button class="chip" [class.active]="filtroEstado === 'Pendiente'" (click)="filtrarPorEstado('Pendiente')">Pendiente</button>
+    <button class="chip" [class.active]="filtroEstado === 'En Producción'" (click)="filtrarPorEstado('En Producción')">En Producción</button>
+    <button class="chip" [class.active]="filtroEstado === 'Entregado'" (click)="filtrarPorEstado('Entregado')">Entregado</button>
+  </div>
+
+  <!-- Estado de carga -->
+  @if (cargando) {
+    <div class="pedidos-cards">
+      <div class="pedido-card skeleton-card"></div>
+      <div class="pedido-card skeleton-card"></div>
+      <div class="pedido-card skeleton-card"></div>
+    </div>
+  }
+
+  <div class="feedback-message feedback-error mb-3" *ngIf="errorCarga">
+    ⚠ {{ errorCarga }}
+  </div>
+
+  <!-- Lista de Cards -->
+  @if (paginatedItems.length > 0 && !cargando) {
+    <div class="pedidos-cards">
+      @for (pedido of paginatedItems; track pedido.id) {
+        <div class="pedido-card">
+          <div class="pedido-numero">#{{ pedido.id }}</div>
+          <div class="pedido-contenido">
+            <div class="pedido-principal">
+              <div class="pedido-cliente">
+                <span class="cliente-icon">🏭</span>
+                <span class="cliente-nombre">{{ pedido.cliente_razon_social || 'Sin cliente' }}</span>
+              </div>
+              <div class="pedido-camion">
+                <span class="camion-icon">🚛</span>
+                <span class="camion-nombre">{{ pedido.camion || 'Sin camión' }}</span>
+              </div>
+            </div>
+            <div class="pedido-secundario">
+              <span class="badge-estado"
+                [class.pendiente]="pedido.estado === 'Pendiente'"
+                [class.aprobado]="pedido.estado === 'En Producción'"
+                [class.entregado]="pedido.estado === 'Entregado'"
+                [class.rechazado]="pedido.estado === 'Rechazado' || pedido.estado === 'Cancelado'">
+                {{ pedido.estado }}
+              </span>
+              <span class="pedido-fecha">
+                📅 {{ pedido.fecha_entrega || 'Sin fecha' }}
+              </span>
+            </div>
+          </div>
+          <div class="pedido-acciones">
+            <a class="btn btn-ver-detalle"
+              [routerLink]="['/mis-pedidos', pedido.id]"
+              [queryParams]="{ es_modificado: pedido.es_modificado }">
+              Ver detalle →
+            </a>
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (!cargando) {
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>No hay pedidos registrados aún.<br>
+        <a routerLink="/formulario" class="link-verde">Crear primera simulación →</a>
+      </p>
+    </div>
+  }
+
+  <app-pagination [page]="page" [totalPages]="totalPages" (pageChange)="onPageChange($event)"></app-pagination>
 </div>

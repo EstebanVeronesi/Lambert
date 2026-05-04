@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { Paso1CamionComponent } from './pasos/paso1-camion/paso1-camion';
 import { Paso2ConfiguracionComponent } from './pasos/paso2-configuracion/paso2-configuracion';
 import { Paso3ResultadosComponent } from './pasos/paso3-resultados/paso3-resultados';
@@ -9,18 +10,20 @@ import { FormDataService } from '../../services/form-data.service';
 import { ProyectoService } from '../../services/proyecto.service';
 import { LoginService } from '../../services/auth/login.service';
 import { CamionService } from '../../services/camion.service';
+import { BreadcrumbComponent } from '../../shared/breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-formulario',
   standalone: true,
-  imports: [CommonModule, Paso1CamionComponent, Paso2ConfiguracionComponent, Paso3ResultadosComponent, Paso4ClienteComponent],
+  imports: [CommonModule, Paso1CamionComponent, Paso2ConfiguracionComponent, Paso3ResultadosComponent, Paso4ClienteComponent, BreadcrumbComponent],
   templateUrl: './formulario.html',
   styleUrls: ['./formulario.scss']
 })
-export class FormularioComponent {
+export class FormularioComponent implements OnInit {
   paso = 1;
   modoLectura: boolean = false;
   esModificado: boolean = false;
+  errorConfiguracion: string = '';
   datosProyecto: DatosFormularioProyecto | null = null;
   datosCamion: DatosFormularioProyecto['camion'] = {
     id: null,
@@ -58,22 +61,41 @@ export class FormularioComponent {
   resultadosSimulacion: any = null;
 
 
-  constructor(private formDataService: FormDataService,
-              private proyectoService: ProyectoService,
-              private loginService: LoginService,
-              private camionService: CamionService
-            ) {}
+  constructor(
+    private formDataService: FormDataService,
+    private proyectoService: ProyectoService,
+    private loginService: LoginService,
+    private camionService: CamionService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit() {
-    const guardados = this.formDataService.getDatosProyecto();
-    if (guardados) {
-      this.datosCamion = guardados.camion;
-      this.datosConfiguracion = {
-        configuracion: guardados.configuracion,
-        carroceria: guardados.carroceria,
-        cargas_extra: guardados.cargas_extra ?? []
-      };
-    }
+    this.route.queryParams.subscribe(params => {
+      if (params['resimular'] === 'true') {
+        const datos = this.formDataService.getDatosReSimulacion();
+        if (datos) {
+          this.datosCamion = datos.camion;
+          this.datosConfiguracion = {
+            configuracion: datos.configuracion,
+            carroceria: datos.carroceria,
+            cargas_extra: datos.cargas_extra
+          };
+          this.modoLectura = false;
+          this.paso = 3;
+          return;
+        }
+      }
+
+      const guardados = this.formDataService.getDatosProyecto();
+      if (guardados) {
+        this.datosCamion = guardados.camion;
+        this.datosConfiguracion = {
+          configuracion: guardados.configuracion,
+          carroceria: guardados.carroceria,
+          cargas_extra: guardados.cargas_extra ?? []
+        };
+      }
+    });
   }
 
   irAlPaso(num: number) {
@@ -121,9 +143,9 @@ export class FormularioComponent {
     console.log('Mismo camión detectado → se conserva configuración.');
   }
 
-  this.datosCamion = { ...data.camion };          
+  this.datosCamion = { ...data.camion };
   this.esModificado = data.es_modificado;
-  
+
   // Si es original de BD: modoLectura = true y traer configuración
   this.modoLectura = !data.es_modificado && !!data.camion.id;
   if (data.camion.id) {
@@ -141,17 +163,20 @@ export class FormularioComponent {
           ancho_chasis_1: Number(config.ancho_chasis_1),
           ancho_chasis_2: config.ancho_chasis_2 ? Number(config.ancho_chasis_2) : null };
 
-        this.datosConfiguracion = { 
+        this.datosConfiguracion = {
           ...this.datosConfiguracion,
           configuracion: parsedConfig
         };
         console.log('Configuración original cargada:', config);
       },
-      error: (err: any) => console.error('Error cargando configuración del camión:', err)
+      error: (err: any) => {
+        console.error('Error cargando configuración del camión:', err);
+        this.errorConfiguracion = 'Error al cargar la configuración del camión.';
+      }
     });
   }
-  
-  console.log('DEBUG esModificado después', this.esModificado);   
+
+  console.log('DEBUG esModificado después', this.esModificado);
   console.log('Camión seleccionado:', this.datosCamion);
   }
 
@@ -163,8 +188,8 @@ export class FormularioComponent {
   armarDatosProyecto(): DatosFormularioProyecto {
     const usuarioLogueado = this.loginService.getCurrentUser();
     const proyecto: DatosFormularioProyecto = {
-      cliente: { cuit: 0, razon_social: '' },
-      vendedor: { id: Number(usuarioLogueado!.id), nombre: usuarioLogueado!.nombre},
+      cliente: { cuit: 1, razon_social: 'Pendiente' },
+      vendedor: { id: Number(usuarioLogueado!.id || 1), nombre: usuarioLogueado!.nombre || 'Usuario' },
       camion: { ...this.datosCamion },
       configuracion: this.datosConfiguracion.configuracion!,
       carroceria: this.datosConfiguracion.carroceria!,
@@ -192,7 +217,7 @@ export class FormularioComponent {
   guardarProyecto(resultados: any) {
   const datos = this.armarDatosProyecto();
   this.resultadosSimulacion = resultados;
-  
+
   this.datosProyecto = datos;
   this.irAlPaso(4);
   }
@@ -201,5 +226,5 @@ export class FormularioComponent {
     console.log('Volviendo al paso 2 con los datos actuales...');
     this.paso = 2;
   }
-  
+
 }

@@ -1,14 +1,16 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../types/express.types';
 import { ProyectoRepository } from '../repositories/proyecto.repository';
+import logger from '../utils/logger';
 
 // Listar Pedidos (Inteligente: Admin ve todo, Vendedor ve lo suyo)
-export const listarPedidos = async (req: Request, res: Response) => {
+export const listarPedidos = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // 1. Obtenemos el usuario del token (req as any para evitar error de TS)
-    const usuario = (req as any).user; 
+    // 1. Obtenemos el usuario del token
+    const usuario = req.user; 
     
     // Debug: para que veas en consola quién está pidiendo los datos
-    console.log("Usuario solicitante:", usuario);
+    logger.info("Usuario solicitante:", usuario);
 
     let pedidos;
 
@@ -22,19 +24,20 @@ export const listarPedidos = async (req: Request, res: Response) => {
          return res.status(400).json({ error: "Token inválido: falta identificación de usuario." });
       }
       
-      console.log(`Filtrando pedidos para el vendedor DNI: ${usuario.id}`);
-      pedidos = await ProyectoRepository.findByVendedor(usuario.id);
+      logger.info(`Filtrando pedidos para el vendedor DNI: ${usuario.id}`);
+      pedidos = await ProyectoRepository.findByVendedor(String(usuario.id));
     }
 
     res.json(pedidos);
 
-  } catch (error: any) {
-    console.error("Error en listarPedidos:", error);
-    res.status(500).json({ error: error.message || "Error al obtener la lista de pedidos" });
+  } catch (error: unknown) {
+    logger.error("Error en listarPedidos:", error);
+    const message = error instanceof Error ? error.message : 'Error al obtener la lista de pedidos';
+    res.status(500).json({ error: message });
   }
 };
 
-export const actualizarPedido = async (req: Request, res: Response) => {
+export const actualizarPedido = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     // El frontend debe enviar si es modificado o no para saber qué tabla tocar
@@ -46,13 +49,14 @@ export const actualizarPedido = async (req: Request, res: Response) => {
 
     const resultado = await ProyectoRepository.updatePedido(Number(id), es_modificado, datosAActualizar);
     res.json(resultado);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    res.status(500).json({ error: message });
   }
 };
 
 // --- NUEVO: Obtener un solo pedido por ID ---
-export const obtenerPedido = async (req: Request, res: Response) => {
+export const obtenerPedido = async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const { es_modificado } = req.query; // Leemos el query param ?es_modificado=true/false
@@ -69,7 +73,39 @@ export const obtenerPedido = async (req: Request, res: Response) => {
       }
   
       res.json(pedido);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      res.status(500).json({ error: message });
     }
   };
+
+export const eliminarPedido = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { es_modificado } = req.body;
+    const usuario = req.user;
+
+    if (es_modificado === undefined || es_modificado === null) {
+      return res.status(400).json({ error: "Se requiere el campo 'es_modificado' (true/false)" });
+    }
+
+    // Si NO es admin ni ingeniero, verificar que el pedido le pertenece
+    if (usuario.rol !== 'admin' && usuario.rol !== 'ingeniero') {
+      const pedido = await ProyectoRepository.findById(Number(id), Boolean(es_modificado));
+      if (!pedido) {
+        return res.status(404).json({ error: 'Pedido no encontrado' });
+      }
+      const pedidosDelUsuario = await ProyectoRepository.findByVendedor(String(usuario.id));
+      const esPropietario = pedidosDelUsuario.some((p: { id: number }) => p.id === Number(id));
+      if (!esPropietario) {
+        return res.status(403).json({ error: 'No tenés permiso para eliminar este pedido' });
+      }
+    }
+
+    await ProyectoRepository.delete(Number(id), Boolean(es_modificado));
+    res.json({ message: 'Pedido eliminado correctamente' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al eliminar';
+    res.status(500).json({ error: message });
+  }
+};

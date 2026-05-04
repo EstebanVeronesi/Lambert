@@ -4,13 +4,14 @@ import { PedidoService } from '../../../services/pedido.service';
 import { Cliente } from '../../../types/pedido.types';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { BreadcrumbComponent } from '../../../shared/breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-alta-cliente',
   templateUrl: './alta-clientes.html',
   styleUrls: ['./alta-clientes.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, BreadcrumbComponent],
 })
 export class AltaClienteComponent {
   cliente: Cliente = { cuit: 0, razon_social: '' };

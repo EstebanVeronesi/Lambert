@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { provideRouter } from '@angular/router';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -13,12 +14,15 @@ describe('Login', () => {
   let mockRouter: any;
 
   beforeEach(async () => {
-    // Mock del servicio LoginService
     mockLoginService = {
+      currentUserLogInService: {
+        subscribe: jasmine.createSpy('subscribe').and.returnValue({ unsubscribe: jasmine.createSpy() }),
+        next: jasmine.createSpy('next')
+      },
       login: jasmine
         .createSpy('login')
         .and.returnValue(
-          of({ token: 'mock-token-123', user: { name: 'Esteban', email: 'test@test.com' } })
+          of({ token: 'mock-token-123', user: { id: 1, nombre: 'Test', email: 'test@test.com', rol: 'vendedor' } })
         ),
     };
 
@@ -30,6 +34,7 @@ describe('Login', () => {
     await TestBed.configureTestingModule({
       imports: [ReactiveFormsModule, Login],
       providers: [
+        provideRouter([]),
         { provide: LoginService, useValue: mockLoginService },
         { provide: Router, useValue: mockRouter },
       ],

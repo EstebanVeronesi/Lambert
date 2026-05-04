@@ -1,6 +1,11 @@
 <div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Camiones', link: '/camiones'}, {label: 'Nuevo camión'}]"></app-breadcrumb>
+
   <div class="form-wrapper">
-    <h1 class="page-title text-center">Nuevo Camión</h1>
+    <div class="mb-4">
+      <h1 class="page-title text-center mb-1">Nuevo Camión</h1>
+      <p class="page-subtitle text-center">Complete todos los campos del camión</p>
+    </div>
 
     <form [formGroup]="form" (ngSubmit)="guardar()">
       <!-- Marca -->

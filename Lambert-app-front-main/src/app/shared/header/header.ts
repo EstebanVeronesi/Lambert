@@ -13,19 +13,29 @@ export class Header {
   isLoggedIn = signal(false);
 
   constructor(private loginService: LoginService, private router: Router) {
-    // Inicializamos el estado real al cargar la app
     this.loginService.isLoggedIn().subscribe();
-
-    // Sincronizamos el BehaviorSubject con la signal
     this.loginService.currentUserLogInService.subscribe((loggedIn) => {
       this.isLoggedIn.set(loggedIn);
     });
   }
 
+  getUserInitials(): string {
+    const name = this.loginService.getCurrentUser()?.nombre || 'U';
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  getUserName(): string {
+    return this.loginService.getCurrentUser()?.nombre || 'Usuario';
+  }
+
+  getUserRole(): string {
+    return this.loginService.getCurrentUser()?.rol || '';
+  }
+
   logout(): void {
     this.loginService.logout().subscribe({
     next: () => {
-      this.isLoggedIn.set(false); 
+      this.isLoggedIn.set(false);
       this.router.navigateByUrl('/iniciar-sesion');
     },
     error: (err) => {

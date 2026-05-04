@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lambert — Documentación Técnica de Simulación</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --verde: #159947;
+      --rojo: #da251d;
+      --negro: #262626;
+      --gris: #333333;
+      --fondo: #f4f6f8;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--fondo);
+      color: var(--negro);
+      line-height: 1.6;
+    }
+
+    .cover-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: linear-gradient(135deg, var(--negro) 0%, var(--gris) 100%);
+      color: white;
+      padding: 2rem;
+    }
+
+    .cover-page h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .cover-page .subtitle {
+      font-size: 1.4rem;
+      color: var(--verde);
+      margin-bottom: 2rem;
+    }
+
+    .cover-page .meta {
+      font-size: 0.95rem;
+      color: #aaa;
+    }
+
+    .section-title {
+      color: var(--verde);
+      border-bottom: 3px solid var(--verde);
+      padding-bottom: 0.5rem;
+      margin-top: 3rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .subsection-title {
+      color: var(--negro);
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      padding-left: 0.75rem;
+      border-left: 4px solid var(--verde);
+    }
+
+    .formula-block {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-left: 4px solid var(--verde);
+      border-radius: 4px;
+      padding: 1rem 1.25rem;
+      margin: 0.75rem 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+    }
+
+    .formula-block .comment {
+      color: var(--verde);
+      font-weight: 600;
+    }
+
+    .formula-block .var {
+      color: var(--rojo);
+    }
+
+    table {
+      font-size: 0.9rem;
+    }
+
+    table thead {
+      background: var(--negro);
+      color: white;
+    }
+
+    .badge-p1 { background: var(--verde); }
+    .badge-p2 { background: #ffc107; color: var(--negro); }
+    .badge-p3 { background: var(--rojo); }
+
+    .toc-link {
+      text-decoration: none;
+      color: var(--gris);
+      display: block;
+      padding: 0.35rem 0;
+      border-bottom: 1px dashed #dee2e6;
+    }
+
+    .toc-link:hover {
+      color: var(--verde);
+    }
+
+    .toc-link .toc-num {
+      display: inline-block;
+      width: 2rem;
+      font-weight: 700;
+      color: var(--verde);
+    }
+
+    .info-card {
+      background: white;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    @media print {
+      body { background: white; }
+      .cover-page { background: var(--negro) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .section-title { page-break-before: always; }
+      .section-title:first-of-type { page-break-before: avoid; }
+      .formula-block { break-inside: avoid; }
+      table { break-inside: avoid; }
+      .info-card { break-inside: avoid; box-shadow: none; border: 1px solid #dee2e6; }
+      a { color: var(--negro); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ==================== PORTADA ==================== -->
+<div class="cover-page">
+  <div style="font-size: 4rem; margin-bottom: 1rem;">&#9881;</div>
+  <h1>LAMBERT</h1>
+  <div class="subtitle">Documentación Técnica — Motor de Simulación</div>
+  <div class="meta">
+    <p>Fórmulas de cálculo, datos de entrada, verificaciones normativas<br>y sistema de recomendaciones inteligentes</p>
+    <p style="margin-top: 2rem; font-size: 0.85rem;">Generado el 3 de mayo de 2026</p>
+  </div>
+</div>
+
+<div class="container py-5">
+
+<!-- ==================== ÍNDICE ==================== -->
+<h2 class="section-title" id="indice">Índice de Contenidos</h2>
+<div class="info-card">
+  <a href="#datos-entrada" class="toc-link"><span class="toc-num">1</span> Datos de Entrada</a>
+  <a href="#constantes" class="toc-link"><span class="toc-num">2</span> Constantes Normativas</a>
+  <a href="#formulas" class="toc-link"><span class="toc-num">3</span> Fórmulas de Cálculo</a>
+  <a href="#verificaciones" class="toc-link"><span class="toc-num">4</span> Verificaciones</a>
+  <a href="#recomendaciones" class="toc-link"><span class="toc-num">5</span> Recomendaciones y Soluciones</a>
+  <a href="#diagrama" class="toc-link"><span class="toc-num">6</span> Diagrama de Carga (SVG)</a>
+</div>
+
+<!-- ==================== 1. DATOS DE ENTRADA ==================== -->
+<h2 class="section-title page-break" id="datos-entrada">1. Datos de Entrada</h2>
+
+<h4 class="subsection-title">1.1 Camión</h4>
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td>number</td><td>ID del camión en la base de datos</td></tr>
+      <tr><td><code>marca_camion</code></td><td>string</td><td>Marca (ej: Ford, Volvo, Scania)</td></tr>
+      <tr><td><code>modelo_camion</code></td><td>string</td><td>Modelo específico</td></tr>
+      <tr><td><code>ano_camion</code></td><td>string</td><td>Año de fabricación</td></tr>
+      <tr><td><code>tipo_camion</code></td><td><code>'4x2' | '6x2'</code></td><td>Configuración de ejes</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 class="subsection-title">1.2 Configuración del chasis</h4>
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Unidad</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td><code>distancia_entre_ejes</code></td><td>number</td><td>mm</td><td>Distancia entre eje delantero y trasero</td></tr>
+      <tr><td><code>distancia_primer_eje_espalda_cabina</code></td><td>number</td><td>mm</td><td>Distancia del eje delantero a la espalda de cabina</td></tr>
+      <tr><td><code>voladizo_delantero</code></td><td>number</td><td>mm</td><td>Voladizo delantero del chasis</td></tr>
+      <tr><td><code>voladizo_trasero</code></td><td>number</td><td>mm</td><td>Voladizo trasero del chasis</td></tr>
+      <tr><td><code>peso_eje_delantero</code></td><td>number</td><td>kg</td><td>Tara del eje delantero (peso sin carga)</td></tr>
+      <tr><td><code>peso_eje_trasero</code></td><td>number</td><td>kg</td><td>Tara del eje trasero (peso sin carga)</td></tr>
+      <tr><td><code>pbt</code></td><td>number</td><td>kg</td><td>Peso Bruto Total del camión</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 class="subsection-title">1.3 Carrocería</h4>
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Unidad</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td><code>tipo_carroceria</code></td><td>string</td><td>—</td><td>Tipo (ej: caja plana, volcable, furgón)</td></tr>
+      <tr><td><code>largo_carroceria</code></td><td>number</td><td>mm</td><td>Largo total de la carrocería</td></tr>
+      <tr><td><code>separacion_cabina_carroceria</code></td><td>number</td><td>mm</td><td>Separación entre cabina y carrocería</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 class="subsection-title">1.4 Cargas extra (array)</h4>
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Unidad</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td><code>descripcion</code></td><td>string</td><td>—</td><td>Descripción de la carga (ej: winche, tanque)</td></tr>
+      <tr><td><code>peso</code></td><td>number</td><td>kg</td><td>Peso individual de la carga</td></tr>
+      <tr><td><code>distancia_eje_delantero</code></td><td>number</td><td>mm</td><td>Distancia desde el eje delantero hasta la carga</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== 2. CONSTANTES NORMATIVAS ==================== -->
+<h2 class="section-title page-break" id="constantes">2. Constantes Normativas</h2>
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead><tr><th>Constante</th><th>Valor</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td><code>PBT_MAX_4x2</code></td><td><strong>16,500 kg</strong></td><td>PBT máximo legal para camión 4x2</td></tr>
+      <tr><td><code>PBT_MAX_6x2</code></td><td><strong>24,000 kg</strong></td><td>PBT máximo legal para camión 6x2 (trieje)</td></tr>
+      <tr><td><code>PORCENTAJE_4x2</code></td><td><strong>36%</strong></td><td>% máximo de carga en eje delantero (4x2)</td></tr>
+      <tr><td><code>PORCENTAJE_6x2</code></td><td><strong>25%</strong></td><td>% máximo de carga en eje delantero (6x2)</td></tr>
+      <tr><td><code>VOLADIZO_TRASERO_MAX</code></td><td><strong>60%</strong></td><td>Voladizo trasero máximo como % de distancia entre ejes</td></tr>
+      <tr><td><code>TOLERANCIA_CHASIS</code></td><td><strong>10 mm</strong></td><td>Margen para considerar "sin cambios" en chasis</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== 3. FÓRMULAS ==================== -->
+<h2 class="section-title page-break" id="formulas">3. Fórmulas de Cálculo</h2>
+
+<h4 class="subsection-title">3.1 Fase 0 — Preparación de variables</h4>
+<div class="formula-block">
+  <span class="comment">// PBT efectivo (no puede superar el máximo normativo)</span><br>
+  <span class="var">pbt</span> = min(pbtEntrada, pbtMaxNormativo)<br><br>
+  <span class="comment">// Límites máximos por eje</span><br>
+  <span class="var">maxEjeDelantero</span> = pbtMaxNormativo × (PORCENTAJE / 100)<br>
+  <span class="var">maxEjeTrasero</span> = pbtMaxNormativo - maxEjeDelantero<br><br>
+  <span class="comment">// Suma de todas las cargas extra</span><br>
+  <span class="var">cargaExtraTotal</span> = Σ(cargas_extra[i].peso)<br><br>
+  <span class="comment">// Centro de masa ponderado de cargas extra</span><br>
+  <span class="var">momentoTotalCargas</span> = Σ(cargas_extra[i].peso × cargas_extra[i].distancia_eje_delantero)<br>
+  <span class="var">posCargaExtra</span> = momentoTotalCargas / cargaExtraTotal &nbsp; <em>(si cargaExtraTotal > 0)</em>
+</div>
+
+<h4 class="subsection-title">3.2 Fase 1 — Diagnóstico: Fórmula Maestra (Celda N64 de Gian)</h4>
+<div class="formula-block">
+  <span class="comment">// Capacidades útiles de cada eje</span><br>
+  <span class="var">capLibreDelantera</span> = maxEjeDelantero - taraDelantera<br>
+  <span class="var">capLibreTrasera</span> = maxEjeTrasero - taraTrasera<br>
+  <span class="var">cargaUtilCarroceria</span> = (capLibreDelantera + capLibreTrasera) - cargaExtraTotal<br><br>
+  <span class="comment">// Centro de carga de la carrocería (desde eje delantero)</span><br>
+  <span class="var">centroCargaCaja</span> = espaldaCabina + sepCabina + (largoCarroceria / 2)<br><br>
+  <span class="comment">// ═══════════════════════════════════════════════════</span><br>
+  <span class="comment">// FÓRMULA MAESTRA — Equilibrio de momentos sobre eje trasero</span><br>
+  <span class="comment">// ═══════════════════════════════════════════════════</span><br>
+  <span class="var">momentoCarroceria</span> = cargaUtilCarroceria × (distEjes - centroCargaCaja)<br>
+  <span class="var">momentoTaraDel</span> = taraDelantera × distEjes<br>
+  <span class="var">momentoCargaExtra</span> = cargaExtraTotal × (distEjes - posCargaExtra)<br><br>
+  <span class="var">pesoRealDelantero</span> = (momentoCarroceria + momentoTaraDel + momentoCargaExtra) / distEjes<br><br>
+  <span class="comment">// Porcentajes reales de distribución</span><br>
+  <span class="var">porcentajeRealDelantero</span> = (pesoRealDelantero / pbt) × 100<br>
+  <span class="var">porcentajeRealTrasero</span> = 100 - porcentajeRealDelantero<br><br>
+  <span class="comment">// Cargas netas por eje (peso real menos tara)</span><br>
+  <span class="var">cargaEjeDelantero</span> = pesoRealDelantero - taraDelantera<br>
+  <span class="var">cargaEjeTrasero</span> = (pbt - pesoRealDelantero) - taraTrasera
+</div>
+
+<h4 class="subsection-title">3.3 Fase 2 — Solución: Desplazamiento del eje (Celda N54)</h4>
+<div class="formula-block">
+  <span class="comment">// Momentos totales de las cargas</span><br>
+  <span class="var">momentosCargas</span> = (cargaExtraTotal × posCargaExtra) + (cargaUtilCarroceria × centroCargaCaja)<br>
+  <span class="var">pesoObjetivoTraseroLibre</span> = maxEjeTrasero - taraTrasera<br><br>
+  <span class="var">nuevaDistEjes</span> = momentosCargas / pesoObjetivoTraseroLibre &nbsp; <em>(si > 0, sino distEjes)</em><br>
+  <span class="var">desplazamientoEje</span> = nuevaDistEjes - distEjes
+</div>
+
+<h4 class="subsection-title">3.4 Fase 3 — Geometría: Chasis y voladizo</h4>
+<div class="formula-block">
+  <span class="comment">// Alargar o cortar chasis</span><br>
+  <span class="var">espacioNecesario</span> = espaldaCabina + sepCabina + largoCarroceria<br>
+  <span class="var">espacioDisponible</span> = distEjes + volTrasero<br>
+  <span class="var">modifChasis</span> = espacioNecesario - espacioDisponible<br><br>
+  <span class="comment">// Voladizo trasero resultante (sin mover el eje)</span><br>
+  <span class="var">voladizoTraseroCalculado</span> = espacioNecesario - distEjes<br><br>
+  <span class="comment">// Voladizo con desplazamiento del eje</span><br>
+  <span class="var">voladizoConDesplazamiento</span> = volTrasero - desplazamientoEje + modifChasis<br>
+  <span class="var">pctVoladizoConDesplazamiento</span> = (voladizoConDesplazamiento × 100) / nuevaDistEjes<br><br>
+  <span class="comment">// Largo final del camión armado</span><br>
+  <span class="var">largoTotalCamion</span> = volDelantero + distEjes + volTrasero + modifChasis<br><br>
+  <span class="comment">// Centro de carga total</span><br>
+  <span class="var">centroCargaTotal</span> = centroCargaCaja
+</div>
+
+<!-- ==================== 4. VERIFICACIONES ==================== -->
+<h2 class="section-title page-break" id="verificaciones">4. Verificaciones</h2>
+
+<h4 class="subsection-title">4.1 Distribución de carga por eje</h4>
+<div class="info-card">
+  <table class="table table-bordered mb-0">
+    <thead><tr><th>Tipo de camión</th><th>Rango válido (% del PBT en eje delantero)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>4x2</strong></td><td>30% — 36%</td></tr>
+      <tr><td><strong>6x2</strong></td><td>23% — 27%</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="formula-block mt-3">
+  <span class="var">ok</span> = porcentajeRealDelantero >= min && porcentajeRealDelantero <= max
+</div>
+
+<h4 class="subsection-title">4.2 Voladizo trasero</h4>
+<div class="formula-block">
+  <span class="var">limite</span> = distEjes × 0.60<br>
+  <span class="var">ok</span> = voladizoTraseroCalculado <= limite<br>
+  <span class="var">exceso</span> = voladizoTraseroCalculado - limite &nbsp; <em>(si excede)</em>
+</div>
+
+<!-- ==================== 5. RECOMENDACIONES ==================== -->
+<h2 class="section-title page-break" id="recomendaciones">5. Recomendaciones y Soluciones</h2>
+
+<h4 class="subsection-title">5.1 Estructura de cada recomendación</h4>
+<div class="formula-block">
+  {<br>
+  &nbsp;&nbsp;texto: string &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Descripción de la solución<br>
+  &nbsp;&nbsp;prioridad: number &nbsp;&nbsp;&nbsp;&nbsp;// 1, 2 o 3<br>
+  &nbsp;&nbsp;tipo: string &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// Identificador para modal con imagen<br>
+  }
+</div>
+
+<h4 class="subsection-title">5.2 Catálogo completo de recomendaciones</h4>
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>Prioridad</th>
+        <th>Cuándo se genera</th>
+        <th>Ejemplo de texto</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>reducir_largo_carroceria</code></td>
+        <td><span class="badge badge-p1">1</span></td>
+        <td>Voladizo trasero excede 60% de la distancia entre ejes</td>
+        <td><em>"Reducir el largo de la carrocería en 350 mm."</em></td>
+      </tr>
+      <tr>
+        <td><code>ajustar_separacion</code></td>
+        <td><span class="badge badge-p1">1</span></td>
+        <td>Voladizo excede y hay margen para reducir separación cabina-carrocería</td>
+        <td><em>"Reducir la separación cabina-carrocería en 200 mm."</em></td>
+      </tr>
+      <tr>
+        <td><code>mover_cargas_extra</code></td>
+        <td><span class="badge badge-p1">1</span></td>
+        <td>Hay cargas extra que afectan el centro de carga</td>
+        <td><em>"Reposicionar las cargas extra para optimizar el centro de carga."</em></td>
+      </tr>
+      <tr>
+        <td><code>desplazar_eje</code></td>
+        <td><span class="badge badge-p2">2</span></td>
+        <td>Desplazamiento calculado ≥ 10mm</td>
+        <td><em>"Desplazar el eje trasero 180 mm hacia atrás."</em></td>
+      </tr>
+      <tr>
+        <td><code>modificar_chasis</code></td>
+        <td><span class="badge badge-p2">2</span></td>
+        <td>Voladizo excede Y se requiere alargar/cortar chasis</td>
+        <td><em>"Alargar 250 mm el chasis para corregir la longitud."</em></td>
+      </tr>
+      <tr>
+        <td><code>cambiar_a_6x2</code></td>
+        <td><span class="badge badge-p3">3</span></td>
+        <td>Distribución > 36% en camión 4x2</td>
+        <td><em>"Considerar cambiar a un camión 6x2."</em></td>
+      </tr>
+      <tr>
+        <td><code>mayor_pbt</code></td>
+        <td><span class="badge badge-p3">3</span></td>
+        <td>PBT insuficiente, ejes sobrecargados, o porcentaje fuera de rango</td>
+        <td><em>"Aumentar el PBT a 15,200 kg."</em></td>
+      </tr>
+      <tr>
+        <td><code>revisar_configuracion</code></td>
+        <td><span class="badge badge-p1">1</span></td>
+        <td>Fallback cuando no se detecta solución automática</td>
+        <td><em>"Revisar los parámetros de configuración."</em></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 class="subsection-title">5.3 Lógica de generación por prioridad</h4>
+
+<div class="info-card">
+  <h6 class="text-success fw-bold">PRIORIDAD 1 — No requiere cambiar el camión</h6>
+  <ul class="mb-0">
+    <li>Si voladizo excede → reducir largo de carrocería en el <strong>exceso exacto</strong> calculado</li>
+    <li>Si voladizo excede y hay margen → reducir separación cabina-carrocería</li>
+    <li>Si hay cargas extra → sugerir reposicionarlas para optimizar centro de carga</li>
+  </ul>
+</div>
+
+<div class="info-card">
+  <h6 class="text-warning fw-bold">PRIORIDAD 2 — Requiere modificar el chasis</h6>
+  <ul class="mb-0">
+    <li>Si voladizo excede y chasis necesita cambio → alargar o cortar chasis</li>
+    <li>Si desplazamiento ≥ 10mm → desplazar eje trasero (adelante o atrás), indicando si el voladizo resultante cumple o no</li>
+  </ul>
+</div>
+
+<div class="info-card">
+  <h6 class="text-danger fw-bold">PRIORIDAD 3 — Requiere cambiar el camión</h6>
+  <ul class="mb-0">
+    <li>Si porcentaje < mínimo → calcular PBT necesario; si supera máximo normativo → cambiar camión</li>
+    <li>Si porcentaje > máximo → sugerir cambiar a 6x2 o reducir PBT</li>
+    <li>Si carga negativa en algún eje → aumentar PBT o cambiar camión con diferentes taras</li>
+  </ul>
+</div>
+
+<h4 class="subsection-title">5.4 Observaciones automáticas</h4>
+<div class="info-card">
+  <table class="table table-sm mb-0">
+    <thead><tr><th>Condición</th><th>Mensaje generado</th></tr></thead>
+    <tbody>
+      <tr><td>Todo cumple</td><td><em>"El diseño cumple con todas las normativas verificadas."</em></td></tr>
+      <tr><td>Voladizo excede</td><td><em>"Voladizo trasero excede el máximo permitido en X mm (actual: Y mm, máximo: Z mm)."</em></td></tr>
+      <tr><td>Distribución fuera</td><td><em>"Distribución fuera de norma: X%. Debe estar entre Y% y Z%."</em></td></tr>
+      <tr><td>Eje delantero sobrecargado</td><td><em>"El eje delantero está sobrecargado en X kg."</em></td></tr>
+      <tr><td>Eje trasero sobrecargado</td><td><em>"El eje trasero está sobrecargado en X kg."</em></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== 6. DIAGRAMA ==================== -->
+<h2 class="section-title page-break" id="diagrama">6. Diagrama de Carga (SVG)</h2>
+<p class="text-muted">Datos calculados para renderizado visual proporcional en el frontend:</p>
+
+<div class="info-card">
+  <table class="table table-bordered table-striped mb-0">
+    <thead><tr><th>Campo</th><th>Fórmula / Valor</th></tr></thead>
+    <tbody>
+      <tr><td><code>posicionEjeDelantero</code></td><td>0 (origen del sistema)</td></tr>
+      <tr><td><code>posicionEjeTrasero</code></td><td>distEjes</td></tr>
+      <tr><td><code>posicionCabinaInicio</code></td><td>-volDelantero</td></tr>
+      <tr><td><code>posicionCabinaFin</code></td><td>0</td></tr>
+      <tr><td><code>posicionCarroceriaInicio</code></td><td>espaldaCabina + sepCabina</td></tr>
+      <tr><td><code>posicionCarroceriaFin</code></td><td>espaldaCabina + sepCabina + largoCarroceria</td></tr>
+      <tr><td><code>posicionCentroCargaCarroceria</code></td><td>centroCargaCaja</td></tr>
+      <tr><td><code>posicionCentroCargaTotal</code></td><td>centroCargaTotal</td></tr>
+      <tr><td><code>pesoEjeDelantero</code></td><td>taraDelantera</td></tr>
+      <tr><td><code>pesoEjeTrasero</code></td><td>taraTrasera</td></tr>
+      <tr><td><code>cargaUtilDelantero</code></td><td>cargaEjeDelantero</td></tr>
+      <tr><td><code>cargaUtilTrasero</code></td><td>cargaEjeTrasero</td></tr>
+      <tr><td><code>porcentajeUsoEjeDelantero</code></td><td>(pesoRealDelantero / maxEjeDelantero) × 100</td></tr>
+      <tr><td><code>porcentajeUsoEjeTrasero</code></td><td>((pbt - pesoRealDelantero) / maxEjeTrasero) × 100</td></tr>
+      <tr><td><code>cargasExtra[]</code></td><td>Array de {descripcion, peso, posicion}</td></tr>
+      <tr><td><code>tipoCamion</code></td><td>'4x2' o '6x2'</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="text-center mt-5 pt-4 border-top">
+  <p class="text-muted">LAMBERT — Motor de Simulación Técnica</p>
+  <p class="text-muted small">Documento generado automáticamente el 3 de mayo de 2026</p>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

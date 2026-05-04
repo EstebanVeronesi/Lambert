@@ -3,11 +3,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { RegisterService, RegisterRequest } from '../../../services/auth/register.service';
 import { CommonModule } from '@angular/common';
+import { BreadcrumbComponent } from '../../../shared/breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, BreadcrumbComponent],
   templateUrl: './register.html',
   styleUrls: ['./register.scss'],
 })
@@ -26,13 +27,13 @@ export class Register implements OnInit {
     this.registerForm = this.fb.group({
       nombre: ['', [Validators.required, Validators.minLength(5)]],
       dni: [
-        '', 
+        '',
         [
-        Validators.required, 
-        Validators.pattern(/^[0-9]+$/), 
-        Validators.minLength(7), 
+        Validators.required,
+        Validators.pattern(/^[0-9]+$/),
+        Validators.minLength(7),
         Validators.maxLength(8)
-      ]], // solo números de 7 u 8 dígitos
+      ]],
       rol: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       password: [
@@ -57,7 +58,7 @@ export class Register implements OnInit {
   // Getters para acceder a los form controls desde el template
   get nombre() { return this.registerForm.get('nombre'); }
 
-  get id() { return this.registerForm.get('id'); }
+  get id() { return this.registerForm.get('dni'); }
 
   get rol() { return this.registerForm.get('rol'); }
 

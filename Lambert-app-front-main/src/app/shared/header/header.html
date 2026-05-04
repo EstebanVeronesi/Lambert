@@ -18,7 +18,17 @@
       <div class="navbar-nav ms-auto">
         @if (isLoggedIn()) {
           <a class="nav-link" routerLink="/dashboard">Inicio</a>
-          <button class="nav-link btn btn-link" (click)="logout()">Cerrar sesión</button>
+          <div class="dropdown">
+            <button class="user-dropdown-btn" data-bs-toggle="dropdown">
+              <div class="user-avatar">{{ getUserInitials() }}</div>
+              <span class="user-name">{{ getUserName() }}</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><span class="dropdown-item-text text-muted small">{{ getUserRole() }}</span></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><button class="dropdown-item" (click)="logout()">Cerrar sesión</button></li>
+            </ul>
+          </div>
         }
       </div>
     </div>

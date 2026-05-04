@@ -1,20 +1,81 @@
+$primary: #159947;
+$primary-light: #e8f5ee;
+$gray-200: #e9ecef;
+$gray-600: #6b7280;
+$dark: #262626;
+
 .stepper {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
 
-  div {
-    flex: 1;
-    text-align: center;
-    padding: 0.75rem;
-    border-bottom: 3px solid #e6e6e6;
-    font-weight: 500;
-    color: #333333; // $dark-secondary
-    transition: all 0.3s ease;
+.stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
 
-    &.active {
-      border-color: #159947; // $primary-green
-      color: #159947;
-    }
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 17px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: $gray-200;
+    z-index: 0;
+    transition: background 0.3s;
   }
+
+  &.completed:not(:last-child)::after {
+    background: $primary;
+  }
+}
+
+.stepper-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: $gray-200;
+  color: $gray-600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  z-index: 1;
+  transition: all 0.3s;
+  border: 2px solid $gray-200;
+  position: relative;
+}
+
+.stepper-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: $gray-600;
+  margin-top: 0.5rem;
+  text-align: center;
+  transition: color 0.3s;
+}
+
+.stepper-step.active {
+  .stepper-circle {
+    background: $primary;
+    border-color: $primary;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(21,153,71,0.15);
+  }
+  .stepper-label { color: $primary; font-weight: 600; }
+}
+
+.stepper-step.completed {
+  .stepper-circle {
+    background: $primary;
+    border-color: $primary;
+    color: #fff;
+  }
+  .stepper-label { color: $primary; }
 }

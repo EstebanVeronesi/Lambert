@@ -15,6 +15,8 @@ import { CommonModule } from '@angular/common';
 export class Login implements OnInit {
   loginForm: FormGroup;
   isLoggedIn = signal(false);
+  errorMessage: string = '';
+
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
@@ -55,12 +57,11 @@ export class Login implements OnInit {
         },
         error: (err) => {
           console.error('Error en login:', err);
-          alert('Error al iniciar sesión. Por favor, verifica tus credenciales.');
+          this.errorMessage = 'Credenciales incorrectas. Intentá de nuevo.';
         },
       });
     } else {
       this.loginForm.markAllAsTouched();
-      alert('Formulario inválido. Por favor, revisa los campos.');
     }
   }
 

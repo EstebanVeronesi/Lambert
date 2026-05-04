@@ -1,22 +1,28 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { CamionService, CamionListado, CamionCompleto } from '../../services/camion.service';
+import { FormsModule } from '@angular/forms';
+import { CamionService, CamionListado } from '../../services/camion.service';
 import { LoginService, User } from '../../services/auth/login.service';
+import { BreadcrumbComponent } from '../../shared/breadcrumb/breadcrumb.component';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
 
 @Component({
   selector: 'app-camiones',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule, BreadcrumbComponent, PaginationComponent],
   templateUrl: './camiones.html',
   styleUrls: ['./camiones.scss'],
 })
 export class CamionesComponent implements OnInit {
   camiones: CamionListado[] = [];
+  filteredCamiones: CamionListado[] = [];
   cargando = true;
   error = '';
-  tipoSeleccionado: '' | '4x2' | '6x2' = '';
   currentUser: User | null = null;
+  filtro = '';
+  page = 1;
+  pageSize = 10;
 
   constructor(private camionService: CamionService, private loginService: LoginService) {}
 
@@ -25,6 +31,7 @@ export class CamionesComponent implements OnInit {
     this.camionService.getCamiones().subscribe({
       next: (data) => {
         this.camiones = data;
+        this.filteredCamiones = data;
         this.cargando = false;
       },
       error: (err) => {
@@ -35,34 +42,26 @@ export class CamionesComponent implements OnInit {
     });
   }
 
-  nuevoCamionOriginal(): void {
-    const nuevoCamion: CamionCompleto = {
-      marca_camion: '',
-      modelo_camion: '',
-      ano_camion: '', 
-      tipo_camion: '4x2',
-      configuracion: {
-        distancia_entre_ejes: null,
-        distancia_primer_eje_espalda_cabina: null,
-        voladizo_delantero: null,
-        voladizo_trasero: null,
-        peso_eje_delantero: null, 
-        peso_eje_trasero: null,
-        pbt: null,
-        ancho_chasis_1: null,
-        ancho_chasis_2: null
-      }
-    };
-  
-    this.camionService.crearCamion(nuevoCamion).subscribe({
-      next: (res) => {
-        console.log('Camión original creado', res);
-        this.camiones.push({ ...nuevoCamion, id: res.id, estado_verificacion: 'verificado' });
-      },
-      error: (err) => {
-        console.error('Error creando camión', err);
-      }
-    });
+  filtrar(): void {
+    const term = this.filtro.toLowerCase();
+    this.filteredCamiones = this.camiones.filter(c =>
+      c.marca_camion.toLowerCase().includes(term) ||
+      c.modelo_camion.toLowerCase().includes(term)
+    );
+    this.page = 1;
+  }
+
+  get paginatedItems(): CamionListado[] {
+    const start = (this.page - 1) * this.pageSize;
+    return this.filteredCamiones.slice(start, start + this.pageSize);
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.filteredCamiones.length / this.pageSize);
+  }
+
+  onPageChange(newPage: number): void {
+    this.page = newPage;
   }
 
 }

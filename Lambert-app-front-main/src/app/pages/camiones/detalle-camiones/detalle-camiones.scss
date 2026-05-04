@@ -1,63 +1,89 @@
 .resultados {
-  h3, h4 {
-    margin-bottom: 10px;
+  h1 { margin-bottom: 0; }
+}
+
+.badge-tipo-lg {
+  display: inline-flex;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+  background: #e8f5ee;
+  color: #0f7a38;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+
+  .section-icon {
+    font-size: 1.5rem;
   }
 
-  section {
-    margin: 20px 0;
-    padding: 1.5rem;
-    border-radius: 12px;
-    background: #fafafa;
-    border: 1px solid #e6e6e6;
-  }
-
-  .tabla div {
-    display: flex;
-    justify-content: space-between;
-    padding: 4px 0;
-    border-bottom: 1px solid #ddd;
-  }
-
-  .verificacion-cards {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-
-    div {
-      flex: 1;
-      min-width: 220px;
-      padding: 1rem;
-      border-radius: 8px;
-      text-align: center;
-      font-weight: 500;
-    }
-
-    .ok {
-      background: #d4edda;
-      color: #155724;
-    }
-
-    .error {
-      background: #f8d7da;
-      color: #721c24;
-    }
-  }
-
-  .lista-recomendaciones {
-    list-style: none;
-    padding: 0;
+  h4 {
     margin: 0;
+    font-weight: 600;
+    color: #262626;
+  }
+}
 
-    li {
-      margin: 6px 0;
-      line-height: 1.6;
-      padding-left: 16px;
-      text-indent: -8px;
-    }
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
 
-    .separator {
-      border-bottom: 1px dashed #ccc;
-      margin: 12px 0;
-    }
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .info-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+  }
+
+  .info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #262626;
+  }
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.875rem;
+  background: #f4f6f8;
+  border-radius: 8px;
+
+  .config-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .config-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #262626;
   }
 }

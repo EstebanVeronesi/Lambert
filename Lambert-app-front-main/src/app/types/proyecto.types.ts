@@ -17,6 +17,7 @@ export interface Configuracion {
   ancho_chasis_2?: number | null;               // mm
   pbt: number;                                  // kg
   original?: boolean;                           // opcional
+  es_modificado?: boolean;                      // flag para backend
 }
 
 //Configuración de la carroceria
@@ -51,6 +52,43 @@ export interface DatosFormularioProyecto {
   cargas_extra?: CargaExtra[];
 }
 
+// Datos para el diagrama visual de distribución de cargas
+export interface DiagramaCargaExtra {
+  descripcion: string;
+  peso: number;          // kg
+  posicion: number;      // mm desde eje delantero
+}
+
+export interface DiagramaCargaData {
+  posicionEjeDelantero: number;       // siempre 0
+  posicionEjeTrasero: number;         // distancia_entre_ejes
+  posicionCabinaInicio: number;        // negativo (voladizo delantero)
+  posicionCabinaFin: number;           // 0
+  posicionCarroceriaInicio: number;
+  posicionCarroceriaFin: number;
+  posicionCentroCargaCarroceria: number;
+  posicionCentroCargaTotal: number;
+  voladizoDelantero: number;
+  voladizoTrasero: number;
+  largoTotal: number;
+  cargaMaxEjeDelantero: number;
+  cargaMaxEjeTrasero: number;
+  pesoEjeDelantero: number;
+  pesoEjeTrasero: number;
+  cargaUtilDelantero: number;
+  cargaUtilTrasero: number;
+  porcentajeUsoEjeDelantero: number;
+  porcentajeUsoEjeTrasero: number;
+  cargasExtra: DiagramaCargaExtra[];
+  tipoCamion: '4x2' | '6x2';
+}
+
+export interface Recomendacion {
+  texto: string;
+  prioridad: 1 | 2 | 3;
+  tipo: 'reducir_largo_carroceria' | 'ajustar_separacion' | 'mover_cargas_extra' | 'desplazar_eje' | 'modificar_chasis' | 'cambiar_a_6x2' | 'mayor_pbt' | 'revisar_configuracion';
+}
+
 export interface ResultadosCalculo {
   // Resultados principales
   resultado_peso_bruto_total_maximo: number;       // kg
@@ -69,7 +107,11 @@ export interface ResultadosCalculo {
   verificacion_distribucion_carga_ok: boolean;
   verificacion_voladizo_trasero_ok: boolean;
   verificacion_largo_total_equipo_ok?: boolean;
-  recomendaciones: string[];
+  recomendaciones: Recomendacion[];
+  observaciones?: string[];
+
+  // Diagrama visual de distribución de cargas
+  diagramaCarga?: DiagramaCargaData;
 }
 
 // Objeto que el front envía al backend para guardar

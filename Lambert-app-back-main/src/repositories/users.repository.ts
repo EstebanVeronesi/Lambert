@@ -1,4 +1,5 @@
 import { pool } from '../../db';
+import logger from '../utils/logger';
 
 export interface UserRow {
   id: number;
@@ -18,9 +19,19 @@ export class UsersRepository {
       `;
       const result = await pool.query(query);
       return result.rows;
-    } catch (error) {
-      console.error("Error al buscar usuarios:", error);
+    } catch (error: unknown) {
+      logger.error("Error al buscar usuarios:", error);
       throw new Error("No se pudo obtener la lista de usuarios.");
+    }
+  }
+
+  static async delete(dni: string): Promise<void> {
+    try {
+      const query = `DELETE FROM users WHERE dni = $1`;
+      await pool.query(query, [dni]);
+    } catch (error: unknown) {
+      logger.error("Error al eliminar usuario:", error);
+      throw new Error("No se pudo eliminar el usuario.");
     }
   }
 }

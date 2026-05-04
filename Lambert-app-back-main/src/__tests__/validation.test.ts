@@ -34,7 +34,7 @@ describe('Validation', () => {
     });
 
     it('rechaza DNI que no es string', () => {
-      expect(() => Validation.dni(12345678 as any)).toThrow('Invalid DNI');
+      expect(() => Validation.dni(12345678 as unknown as string)).toThrow('Invalid DNI');
     });
   });
 
@@ -76,7 +76,7 @@ describe('Validation', () => {
     });
 
     it('rechaza password que no es string', () => {
-      expect(() => Validation.password(123456 as any)).toThrow('Invalid password');
+      expect(() => Validation.password(123456 as unknown as string)).toThrow('Invalid password');
     });
   });
 });

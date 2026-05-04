@@ -1,16 +1,31 @@
 <div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Nueva simulación'}]"></app-breadcrumb>
 
   <div class="form-wrapper">
 
-    <!-- Stepper visual -->
     <div class="stepper">
-      <div [class.active]="paso === 1">Camión</div>
-      <div [class.active]="paso === 2">Configuración</div>
-      <div [class.active]="paso === 3">Resultados</div>
-      <div [class.active]="paso === 4">Cliente</div>
+      <div class="stepper-step" [class.active]="paso === 1" [class.completed]="paso > 1">
+        <div class="stepper-circle">{{ paso > 1 ? '✓' : '1' }}</div>
+        <span class="stepper-label">Camión</span>
+      </div>
+      <div class="stepper-step" [class.active]="paso === 2" [class.completed]="paso > 2">
+        <div class="stepper-circle">{{ paso > 2 ? '✓' : '2' }}</div>
+        <span class="stepper-label">Configuración</span>
+      </div>
+      <div class="stepper-step" [class.active]="paso === 3" [class.completed]="paso > 3">
+        <div class="stepper-circle">{{ paso > 3 ? '✓' : '3' }}</div>
+        <span class="stepper-label">Resultados</span>
+      </div>
+      <div class="stepper-step" [class.active]="paso === 4">
+        <div class="stepper-circle">4</div>
+        <span class="stepper-label">Cliente</span>
+      </div>
     </div>
 
-    <!-- Renderizado de pasos -->
+    <div *ngIf="errorConfiguracion" class="feedback-message feedback-error mb-3">
+      ⚠ {{ errorConfiguracion }}
+    </div>
+
     <app-paso1-camion
       *ngIf="paso === 1"
       (siguiente)="irAlPaso(2)"
@@ -42,5 +57,4 @@
     </app-paso4-cliente>
 
   </div>
-
 </div>

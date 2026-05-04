@@ -14,4 +14,8 @@ export class UserService {
   getAllUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${this.apiUrl}/usuarios`, { withCredentials: true });
   }
+
+  deleteUser(dni: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/usuarios/${dni}`, { withCredentials: true });
+  }
 }

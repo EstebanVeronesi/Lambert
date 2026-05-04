@@ -7,6 +7,38 @@ export interface CargaExtra {
   distancia_eje_delantero: number; // mm
 }
 
+// Carga extra posicionada para el diagrama de carga
+export interface DiagramaCargaExtra {
+  descripcion: string;
+  peso: number;
+  posicion: number; // mm desde eje delantero
+}
+
+// Datos completos para renderizar el diagrama SVG proporcional del camión
+export interface DiagramaCargaData {
+  posicionEjeDelantero: number;
+  posicionEjeTrasero: number;
+  posicionCabinaInicio: number;
+  posicionCabinaFin: number;
+  posicionCarroceriaInicio: number;
+  posicionCarroceriaFin: number;
+  posicionCentroCargaCarroceria: number;
+  posicionCentroCargaTotal: number;
+  voladizoDelantero: number;
+  voladizoTrasero: number;
+  largoTotal: number;
+  cargaMaxEjeDelantero: number;
+  cargaMaxEjeTrasero: number;
+  pesoEjeDelantero: number;
+  pesoEjeTrasero: number;
+  cargaUtilDelantero: number;
+  cargaUtilTrasero: number;
+  porcentajeUsoEjeDelantero: number;
+  porcentajeUsoEjeTrasero: number;
+  cargasExtra: DiagramaCargaExtra[];
+  tipoCamion: '4x2' | '6x2';
+}
+
 // Datos que el usuario enviará a la API
 export interface DatosFormularioProyecto {
   cliente: {
@@ -67,10 +99,14 @@ export interface ResultadosCalculo {
   verificacion_distribucion_carga_ok: boolean;
   verificacion_voladizo_trasero_ok: boolean;
   verificacion_largo_total_equipo_ok?: boolean;
-  recomendaciones: string[];
+  recomendaciones: Recomendacion[];
+  observaciones?: string[];
   
   // Agrego opcionalmente los campos de error para compatibilidad con el frontend existente
   camposConError?: string[];
+
+  // Diagrama de carga para renderizado SVG proporcional del camión
+  diagramaCarga?: DiagramaCargaData;
 }
 
 // Objeto completo que se guarda o envía al backend
@@ -82,4 +118,10 @@ export interface ProyectoCompletoParaGuardar {
 // Interfaz para la respuesta de simulación (Usada por el ProjectService)
 export interface RespuestaSimulacion {
   resultados: ResultadosCalculo;
+}
+
+export interface Recomendacion {
+  texto: string;
+  prioridad: 1 | 2 | 3;
+  tipo: 'reducir_largo_carroceria' | 'ajustar_separacion' | 'mover_cargas_extra' | 'desplazar_eje' | 'modificar_chasis' | 'cambiar_a_6x2' | 'mayor_pbt' | 'revisar_configuracion';
 }

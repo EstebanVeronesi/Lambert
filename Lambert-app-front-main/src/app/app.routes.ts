@@ -5,7 +5,9 @@ import { AdminGuard } from './auth/guards/admin.guard';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { FormularioComponent } from './pages/formulario/formulario';
 import { MisPedidosComponent } from './pages/mis-pedidos/mis-pedidos';
+import { ExportarPedidosComponent } from './pages/mis-pedidos/exportar-pedidos/exportar-pedidos.component';
 import { PedidoDetalleComponent } from './pages/mis-pedidos/detalle-pedidos/detalle-pedidos';
+import { ImprimirPedidoComponent } from './pages/mis-pedidos/imprimir-pedido/imprimir-pedido.component';
 import { AltaCamionComponent } from './pages/camiones/alta-camiones/alta-camiones';
 import { CamionesComponent } from './pages/camiones/camiones';
 import { CamionDetalleComponent } from './pages/camiones/detalle-camiones/detalle-camiones';
@@ -21,6 +23,8 @@ export const routes: Routes = [
   { path: 'dashboard', component: Dashboard, canActivate: [AuthGuard] },
   { path: 'formulario', component: FormularioComponent, canActivate: [AuthGuard] },
   { path: 'mis-pedidos', component: MisPedidosComponent, canActivate: [AuthGuard] },
+  { path: 'mis-pedidos/exportar', component: ExportarPedidosComponent, canActivate: [AuthGuard] },
+  { path: 'mis-pedidos/:id/imprimir', component: ImprimirPedidoComponent, canActivate: [AuthGuard] },
   { path: 'mis-pedidos/:id', component: PedidoDetalleComponent, canActivate: [AuthGuard] },
   { path: 'camiones/alta', component: AltaCamionComponent, canActivate: [AdminGuard] },
   { path: 'camiones', component: CamionesComponent, canActivate: [AuthGuard] },

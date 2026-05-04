@@ -22,6 +22,36 @@
       <!-- ===================== -->
       <div *ngIf="modo === 'busqueda'">
 
+        <!-- Ilustración de configuraciones de ejes -->
+        <div class="config-ilustracion mb-4">
+          <p class="text-muted small mb-3 text-center">Seleccione la configuración del camión:</p>
+          <div class="config-items">
+            <div class="config-item" [class.active]="tipoSeleccionado === '4x2'" (click)="tipoSeleccionado = '4x2'; filtrarAnos()">
+              <svg viewBox="0 0 200 80" class="config-svg">
+                <!-- Camión 4x2: 1 eje delantero, 1 eje trasero -->
+                <rect x="10" y="20" width="40" height="25" fill="#ccc" rx="3"/>
+                <rect x="55" y="15" width="130" height="30" fill="#aaa" rx="2"/>
+                <circle cx="35" cy="60" r="8" fill="#333"/><circle cx="35" cy="60" r="4" fill="#666"/>
+                <circle cx="140" cy="60" r="8" fill="#333"/><circle cx="140" cy="60" r="4" fill="#666"/>
+                <text x="35" y="75" text-anchor="middle" font-size="8" fill="#555">4×2</text>
+              </svg>
+              <span class="config-label">4×2</span>
+            </div>
+            <div class="config-item" [class.active]="tipoSeleccionado === '6x2'" (click)="tipoSeleccionado = '6x2'; filtrarAnos()">
+              <svg viewBox="0 0 200 80" class="config-svg">
+                <!-- Camión 6x2: 1 eje delantero, 2 ejes traseros -->
+                <rect x="10" y="20" width="40" height="25" fill="#ccc" rx="3"/>
+                <rect x="55" y="15" width="130" height="30" fill="#aaa" rx="2"/>
+                <circle cx="35" cy="60" r="8" fill="#333"/><circle cx="35" cy="60" r="4" fill="#666"/>
+                <circle cx="120" cy="60" r="7" fill="#333"/><circle cx="120" cy="60" r="3.5" fill="#666"/>
+                <circle cx="155" cy="60" r="7" fill="#333"/><circle cx="155" cy="60" r="3.5" fill="#666"/>
+                <text x="35" y="75" text-anchor="middle" font-size="8" fill="#555">6×2</text>
+              </svg>
+              <span class="config-label">6×2</span>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group mb-3">
           <label class="form-label">Marca:</label>
           <select class="form-select"
@@ -49,23 +79,10 @@
         </div>
 
         <div class="form-group mb-3">
-          <label class="form-label">Tipo:</label>
-          <select class="form-select"
-                  [(ngModel)]="tipoSeleccionado"
-                  (change)="filtrarAnos()"
-                  [disabled]="!modeloSeleccionado">
-            <option value="">Seleccione...</option>
-            <option *ngFor="let t of tiposDisponibles" [value]="t">
-              {{ t }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group mb-3">
           <label class="form-label">Año:</label>
           <select class="form-select"
                   [(ngModel)]="anoSeleccionado"
-                  [disabled]="!tipoSeleccionado">
+                  [disabled]="!modeloSeleccionado || !tipoSeleccionado">
             <option value="">Seleccione...</option>
             <option *ngFor="let a of anosDisponibles" [value]="a">
               {{ a }}

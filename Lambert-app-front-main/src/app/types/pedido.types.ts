@@ -122,6 +122,6 @@ export interface PedidoDetalle {
   verificacion_distribucion_carga_ok: boolean | null;
   verificacion_voladizo_trasero_ok: boolean | null;
 
-  // Recomendaciones
-  recomendaciones?: string[];
+  // Recomendaciones (objetos normalizados)
+  recomendaciones?: { texto: string; prioridad: number; tipo: string }[];
 }

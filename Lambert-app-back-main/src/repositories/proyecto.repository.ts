@@ -1,7 +1,43 @@
 import { pool } from '../../db';
 import { ProyectoCompletoParaGuardar } from '../types/proyecto.types';
+import logger from '../utils/logger';
+
+interface UpdatePedidoData {
+  estado?: string;
+  fecha_entrega?: string;
+  carroceria?: Record<string, unknown>;
+  configuracion?: Record<string, unknown>;
+  resultados?: Record<string, unknown>;
+}
+
+interface CreateProyectoResult {
+  pedido_id: number;
+  calculo_id: number;
+  tipo: string;
+}
+
+interface UpdatePedidoResult {
+  message: string;
+  id: number;
+}
 
 export class ProyectoRepository {
+
+  // ==========================================================================
+  // 0. ELIMINAR PEDIDO
+  // ==========================================================================
+  static async delete(id: number, esModificado: boolean): Promise<void> {
+    const client = await pool.connect();
+    try {
+      const tabla = esModificado ? 'proyecto_modificado' : 'pedido';
+      await client.query(`DELETE FROM ${tabla} WHERE id = $1`, [id]);
+    } catch (error) {
+      logger.error('Error al eliminar pedido:', error);
+      throw new Error('No se pudo eliminar el pedido');
+    } finally {
+      client.release();
+    }
+  }
 
   // ==========================================================================
   // 1. LISTAR TODOS (ADMIN)
@@ -12,7 +48,7 @@ export class ProyectoRepository {
       const queryOriginales = `
         SELECT 
           p.id, 
-          c.razon_social as cliente, 
+          c.razon_social as cliente_razon_social, 
           cam.marca_camion || ' ' || cam.modelo_camion as camion,
           p.estado, 
           p.fecha_entrega,
@@ -54,7 +90,7 @@ export class ProyectoRepository {
       const queryModificados = `
         SELECT 
           pm.id, 
-          pm.cliente_razon_social as cliente, 
+          pm.cliente_razon_social as cliente_razon_social, 
           cm.marca_camion || ' ' || cm.modelo_camion as camion, 
           pm.estado_proyecto as estado, 
           pm.fecha_entrega,
@@ -92,9 +128,29 @@ export class ProyectoRepository {
       const finalQuery = `${queryOriginales} UNION ALL ${queryModificados} ORDER BY id DESC`;
       
       const result = await pool.query(finalQuery);
-      return result.rows;
+
+      // Parsear recomendaciones en cada fila: vienen como strings JSON desde text[]
+      const parseRecomendaciones = <T extends Record<string, unknown>>(row: T): T => {
+        if (row.calculos && typeof row.calculos === 'object' && 'recomendaciones' in row.calculos) {
+          const cal = row.calculos as Record<string, unknown>;
+          if (Array.isArray(cal.recomendaciones)) {
+            cal.recomendaciones = cal.recomendaciones.map((r: string) => {
+              try {
+                return typeof r === 'string' ? JSON.parse(r) : r;
+              } catch {
+                return r;
+              }
+            });
+          }
+        }
+        return row;
+      };
+
+      const rows = result.rows.map(parseRecomendaciones);
+
+      return rows;
     } catch (error) {
-      console.error('Error al obtener pedidos:', error);
+      logger.error('Error al obtener pedidos:', error);
       throw new Error('Error al listar los pedidos');
     }
   }
@@ -111,13 +167,14 @@ export class ProyectoRepository {
         query = `
           SELECT 
             p.id, 
-            c.razon_social, c.cuit, -- Datos Cliente
+            c.razon_social as cliente_razon_social, c.cuit, -- Datos Cliente
             p.estado, p.fecha_entrega, false as es_modificado,
             
             -- Datos Camión (Raw para el formulario)
             json_build_object(
                 'id', cam.id, 'marca_camion', cam.marca_camion, 
-                'modelo_camion', cam.modelo_camion, 'tipo_camion', cam.tipo_camion
+                'modelo_camion', cam.modelo_camion, 'ano_camion', cam.ano_camion,
+                'tipo_camion', cam.tipo_camion
             ) as camion,
 
             -- Configuración
@@ -139,7 +196,20 @@ export class ProyectoRepository {
             ) as carroceria,
 
             -- Cálculos Actuales
-            row_to_json(calc.*) as calculos
+            calc.resultado_peso_bruto_total_maximo,
+            calc.resultado_carga_eje_delantero_calculada,
+            calc.resultado_carga_eje_trasero_calculada,
+            calc.resultado_porcentaje_carga_eje_delantero,
+            calc.resultado_modificacion_chasis,
+            calc.resultado_voladizo_trasero_calculado,
+            calc.resultado_largo_final_camion,
+            calc.resultado_centro_carga_total,
+            calc.resultado_centro_carga_carroceria,
+            calc.resultado_nueva_distancia_entre_ejes,
+            calc.resultado_desplazamiento_eje,
+            calc.verificacion_distribucion_carga_ok,
+            calc.verificacion_voladizo_trasero_ok,
+            calc.recomendaciones
 
           FROM pedido p
           JOIN cliente c ON p.fk_cuit_cliente = c.cuit
@@ -178,7 +248,20 @@ export class ProyectoRepository {
                 'equipo_frio_marca_modelo', carr_m.equipo_frio_marca_modelo
             ) as carroceria,
 
-            row_to_json(calc_m.*) as calculos
+            calc_m.resultado_peso_bruto_total_maximo,
+            calc_m.resultado_carga_eje_delantero_calculada,
+            calc_m.resultado_carga_eje_trasero_calculada,
+            calc_m.resultado_porcentaje_carga_eje_delantero,
+            calc_m.resultado_modificacion_chasis,
+            calc_m.resultado_voladizo_trasero_calculado,
+            calc_m.resultado_largo_final_camion,
+            calc_m.resultado_centro_carga_total,
+            calc_m.resultado_centro_carga_carroceria,
+            calc_m.resultado_nueva_distancia_entre_ejes,
+            calc_m.resultado_desplazamiento_eje,
+            calc_m.verificacion_distribucion_carga_ok,
+            calc_m.verificacion_voladizo_trasero_ok,
+            calc_m.recomendaciones
 
           FROM proyecto_modificado pm
           LEFT JOIN camion_modificado cm ON cm.fk_proyecto_modificado_id = pm.id
@@ -190,10 +273,23 @@ export class ProyectoRepository {
       }
 
       const result = await pool.query(query, [id]);
-      return result.rows[0] || null;
+      const row = result.rows[0] || null;
+
+      // Parsear recomendaciones: vienen como strings JSON desde la columna text[]
+      if (row && row.recomendaciones && Array.isArray(row.recomendaciones)) {
+        row.recomendaciones = row.recomendaciones.map((r: string) => {
+          try {
+            return typeof r === 'string' ? JSON.parse(r) : r;
+          } catch {
+            return r;
+          }
+        });
+      }
+
+      return row;
 
     } catch (error) {
-      console.error('Error al buscar pedido por ID:', error);
+      logger.error('Error al buscar pedido por ID:', error);
       throw new Error('Error al obtener el pedido');
     }
   }
@@ -201,7 +297,7 @@ export class ProyectoRepository {
   // ==========================================================================
   // 3. ACTUALIZAR PEDIDO (MEJORADO PARA GUARDAR RESULTADOS DE SIMULACIÓN)
   // ==========================================================================
-  static async updatePedido(id: number, esModificado: boolean, data: any) {
+  static async updatePedido(id: number, esModificado: boolean, data: UpdatePedidoData): Promise<UpdatePedidoResult> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -296,7 +392,7 @@ export class ProyectoRepository {
 
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error('Error actualizando pedido:', error);
+      logger.error('Error actualizando pedido:', error);
       throw new Error('No se pudo actualizar el pedido');
     } finally {
       client.release();
@@ -305,11 +401,10 @@ export class ProyectoRepository {
   // ==========================================================================
   // 3. CREAR PROYECTO (Punto de Entrada)
   // ==========================================================================
-  static async create(proyecto: ProyectoCompletoParaGuardar): Promise<any> {
+  static async create(proyecto: ProyectoCompletoParaGuardar): Promise<CreateProyectoResult> {
     const { datosEntrada } = proyecto;
 
-    // Usamos (configuracion as any) por si TypeScript se queja de que 'es_modificado' no existe en el type
-    if ((datosEntrada.configuracion as any).es_modificado) {
+    if (datosEntrada.configuracion.es_modificado) {
       return this.createModificado(proyecto);
     } else {
       return this.createVerificado(proyecto);
@@ -319,12 +414,9 @@ export class ProyectoRepository {
   // ==========================================================================
   // 4. CREAR MODIFICADO
   // ==========================================================================
-  private static async createModificado(proyecto: ProyectoCompletoParaGuardar): Promise<any> {
+  private static async createModificado(proyecto: ProyectoCompletoParaGuardar): Promise<CreateProyectoResult> {
     const { datosEntrada, resultados } = proyecto;
     const { cliente, vendedor, camion, configuracion, carroceria } = datosEntrada;
-
-    // Casteamos a any si faltan propiedades en el type estricto pero existen en el objeto
-    const configAny = configuracion as any; 
 
     const client = await pool.connect();
     try {
@@ -332,7 +424,7 @@ export class ProyectoRepository {
 
       // 1. Proyecto Modificado
       const proyectoQuery = `
-        INSERT INTO proyecto_modificado (fk_id_vendedor, fk_cuit_cliente, cliente_razon_social, estado_proyecto, created_at)
+        INSERT INTO proyecto_modificado (fk_id_usuario, fk_cuit_cliente, cliente_razon_social, estado_proyecto, created_at)
         VALUES ($1, $2, $3, 'Pendiente', NOW()) RETURNING id;
       `;
       const proyectoRes = await client.query(proyectoQuery, [vendedor.id, cliente.cuit, cliente.razon_social]);
@@ -364,8 +456,8 @@ export class ProyectoRepository {
         configuracion.voladizo_delantero, configuracion.voladizo_trasero, 
         configuracion.peso_eje_delantero, configuracion.peso_eje_trasero, 
         configuracion.pbt,
-        configAny.ancho_chasis_1 || 850, // Valor por defecto si no viene
-        configAny.ancho_chasis_2 ?? null
+        configuracion.ancho_chasis_1 || 850, // Valor por defecto si no viene
+        configuracion.ancho_chasis_2 ?? null
       ]);
 
       // 4. Carrocería Modificada
@@ -391,11 +483,15 @@ export class ProyectoRepository {
           resultado_porcentaje_carga_eje_delantero, 
           resultado_modificacion_chasis, 
           resultado_voladizo_trasero_calculado, 
-          resultado_largo_final_camion, 
+          resultado_largo_final_camion,
+          resultado_centro_carga_total,
+          resultado_centro_carga_carroceria,
+          resultado_nueva_distancia_entre_ejes,
+          resultado_desplazamiento_eje, 
           verificacion_distribucion_carga_ok, 
           verificacion_voladizo_trasero_ok, 
           recomendaciones
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
         RETURNING id;
       `;
       
@@ -407,7 +503,11 @@ export class ProyectoRepository {
         resultados.resultado_porcentaje_carga_eje_delantero, 
         resultados.resultado_modificacion_chasis, 
         resultados.resultado_voladizo_trasero_calculado, 
-        resultados.resultado_largo_final_camion, 
+        resultados.resultado_largo_final_camion,
+        resultados.resultado_centro_carga_total,
+        resultados.resultado_centro_carga_carroceria,
+        resultados.resultado_nueva_distancia_entre_ejes,
+        resultados.resultado_desplazamiento_eje, 
         resultados.verificacion_distribucion_carga_ok, 
         resultados.verificacion_voladizo_trasero_ok, 
         resultados.recomendaciones
@@ -418,7 +518,7 @@ export class ProyectoRepository {
 
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error("Error en transacción (Modificado):", error);
+      logger.error("Error en transacción (Modificado):", error);
       throw new Error("No se pudo guardar el proyecto modificado.");
     } finally {
       client.release();
@@ -429,14 +529,14 @@ export class ProyectoRepository {
 // ==========================================================================
   // BUSCAR POR VENDEDOR (Seguridad: Cada uno ve solo lo suyo)
   // ==========================================================================
-  static async findByVendedor(dniVendedor: number) {
+  static async findByVendedor(dniVendedor: string) {
     try {
       // --- QUERY 1: ORIGINALES FILTRADOS ---
-      // Agregamos: WHERE p.fk_id_vendedor = $1
+      // Agregamos: WHERE p.fk_id_usuario = $1
       const queryOriginales = `
         SELECT 
           p.id, 
-          c.razon_social as cliente, 
+          c.razon_social as cliente_razon_social, 
           cam.marca_camion || ' ' || cam.modelo_camion as camion,
           p.estado, 
           p.fecha_entrega,
@@ -464,17 +564,21 @@ export class ProyectoRepository {
         FROM pedido p
         JOIN cliente c ON p.fk_cuit_cliente = c.cuit
         JOIN camion cam ON p.fk_id_camion = cam.id
-        LEFT JOIN camion_configuracion cc ON cc.fk_id_camion = cam.id
+        LEFT JOIN LATERAL (
+          SELECT * FROM camion_configuracion 
+          WHERE fk_id_camion = cam.id 
+          ORDER BY id DESC LIMIT 1
+        ) cc ON true
         LEFT JOIN calculos calc ON calc.fk_id_pedido = p.id
-        WHERE p.fk_id_vendedor = $1  -- <--- FILTRO POR VENDEDOR
+        WHERE p.fk_id_usuario = $1  -- <--- FILTRO POR VENDEDOR
       `;
 
       // --- QUERY 2: MODIFICADOS FILTRADOS ---
-      // Agregamos: WHERE pm.fk_id_vendedor = $1
+      // Agregamos: WHERE pm.fk_id_usuario = $1
       const queryModificados = `
         SELECT 
           pm.id, 
-          pm.cliente_razon_social as cliente, 
+          pm.cliente_razon_social as cliente_razon_social, 
           cm.marca_camion || ' ' || cm.modelo_camion as camion, 
           pm.estado_proyecto as estado, 
           pm.fecha_entrega,
@@ -501,17 +605,41 @@ export class ProyectoRepository {
 
         FROM proyecto_modificado pm
         LEFT JOIN camion_modificado cm ON cm.fk_proyecto_modificado_id = pm.id
-        LEFT JOIN configuracion_modificada conf_m ON conf_m.fk_id_camion_modificado = cm.id
+        LEFT JOIN LATERAL (
+          SELECT * FROM configuracion_modificada 
+          WHERE fk_id_camion_modificado = cm.id 
+          ORDER BY id DESC LIMIT 1
+        ) conf_m ON true
         LEFT JOIN calculos_modificado calc_m ON calc_m.fk_proyecto_modificado_id = pm.id
-        WHERE pm.fk_id_vendedor = $1 -- <--- FILTRO POR VENDEDOR
+        WHERE pm.fk_id_usuario = $1 -- <--- FILTRO POR VENDEDOR
       `;
 
       const finalQuery = `${queryOriginales} UNION ALL ${queryModificados} ORDER BY id DESC`;
       
       const result = await pool.query(finalQuery, [dniVendedor]);
-      return result.rows;
+
+      // Parsear recomendaciones en cada fila: vienen como strings JSON desde text[]
+      const parseRecomendacionesVendedor = <T extends Record<string, unknown>>(row: T): T => {
+        if (row.calculos && typeof row.calculos === 'object' && 'recomendaciones' in row.calculos) {
+          const cal = row.calculos as Record<string, unknown>;
+          if (Array.isArray(cal.recomendaciones)) {
+            cal.recomendaciones = cal.recomendaciones.map((r: string) => {
+              try {
+                return typeof r === 'string' ? JSON.parse(r) : r;
+              } catch {
+                return r;
+              }
+            });
+          }
+        }
+        return row;
+      };
+
+      const rows = result.rows.map(parseRecomendacionesVendedor);
+
+      return rows;
     } catch (error) {
-      console.error('Error al listar pedidos del vendedor:', error);
+      logger.error('Error al listar pedidos del vendedor:', error);
       throw new Error('Error al obtener tus pedidos.');
     }
   }
@@ -521,12 +649,10 @@ export class ProyectoRepository {
    * 5. CREAR VERIFICADO
    * ==========================================================================
    */
-  private static async createVerificado(proyecto: ProyectoCompletoParaGuardar): Promise<any> {
+  private static async createVerificado(proyecto: ProyectoCompletoParaGuardar): Promise<CreateProyectoResult> {
     const { datosEntrada, resultados } = proyecto;
     const { cliente, vendedor, camion, configuracion, carroceria } = datosEntrada;
 
-    // Casteamos a any para acceder a propiedades que quizás no están en el type estricto
-    const configAny = configuracion as any;
     let camionId: number;
     const client = await pool.connect();
     
@@ -575,17 +701,17 @@ export class ProyectoRepository {
         configuracion.peso_eje_delantero, configuracion.peso_eje_trasero, 
         configuracion.pbt, 
         false,
-        configAny.ancho_chasis_1 || 850,
-        configAny.ancho_chasis_2 ?? null,
-        configAny.original ?? true
+        configuracion.ancho_chasis_1 || 850,
+        configuracion.ancho_chasis_2 ?? null,
+        configuracion.original ?? true
       ]);
 
       // 4. Pedido
       const pedidoQuery = `
-        INSERT INTO pedido (fk_id_camion, fk_cuit_cliente, fk_id_vendedor, estado, fecha_pedido)
+        INSERT INTO pedido (fk_id_camion, fk_cuit_cliente, fk_id_usuario, estado, fecha_pedido)
         VALUES ($1, $2, $3, 'Pendiente', NOW()) RETURNING id;
       `;
-      const pedidoRes = await client.query(pedidoQuery, [camionId, cliente.cuit, vendedor.id]);
+      const pedidoRes = await client.query(pedidoQuery, [camionId, cliente.cuit, String(vendedor.id)]);
       const pedidoId = pedidoRes.rows[0].id;
 
       // 5. Carrocería
@@ -612,11 +738,15 @@ export class ProyectoRepository {
           resultado_modificacion_chasis, 
           resultado_voladizo_trasero_calculado, 
           resultado_largo_final_camion, 
+          resultado_centro_carga_total,
+          resultado_centro_carga_carroceria,
+          resultado_nueva_distancia_entre_ejes,
+          resultado_desplazamiento_eje,
           verificacion_distribucion_carga_ok, 
           verificacion_voladizo_trasero_ok, 
           recomendaciones
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
         RETURNING id;
       `;
       const calculosRes = await client.query(calculosQuery, [
@@ -628,6 +758,10 @@ export class ProyectoRepository {
         resultados.resultado_modificacion_chasis, 
         resultados.resultado_voladizo_trasero_calculado, 
         resultados.resultado_largo_final_camion, 
+        resultados.resultado_centro_carga_total,
+        resultados.resultado_centro_carga_carroceria,
+        resultados.resultado_nueva_distancia_entre_ejes,
+        resultados.resultado_desplazamiento_eje,
         resultados.verificacion_distribucion_carga_ok, 
         resultados.verificacion_voladizo_trasero_ok, 
         resultados.recomendaciones
@@ -638,7 +772,7 @@ export class ProyectoRepository {
 
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error("Error en transacción (Verificado):", error);
+      logger.error("Error en transacción (Verificado):", error);
       throw new Error("No se pudo guardar el proyecto. La operación fue revertida.");
     } finally {
       client.release();

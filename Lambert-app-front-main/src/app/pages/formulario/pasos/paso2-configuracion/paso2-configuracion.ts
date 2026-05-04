@@ -1,7 +1,9 @@
-import { Component, EventEmitter, Output, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Output, Input, OnInit, OnChanges, AfterViewInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DatosFormularioProyecto, CargaExtra, Configuracion, Carroceria } from '../../../../types/proyecto.types';
+
+declare var bootstrap: any;
 
 type CargasExtra = CargaExtra[];
 
@@ -12,7 +14,7 @@ type CargasExtra = CargaExtra[];
   templateUrl: './paso2-configuracion.html',
   styleUrls: ['./paso2-configuracion.scss']
 })
-export class Paso2ConfiguracionComponent implements OnInit, OnChanges {
+export class Paso2ConfiguracionComponent implements OnInit, OnChanges, AfterViewInit {
   @Input() datosGuardados?: {
     configuracion: DatosFormularioProyecto['configuracion'];
     carroceria: DatosFormularioProyecto['carroceria'];
@@ -72,6 +74,13 @@ export class Paso2ConfiguracionComponent implements OnInit, OnChanges {
     this.carroceria = { ...this.datosGuardados.carroceria };
     this.cargas_extra = [...(this.datosGuardados.cargas_extra ?? [])];
   }
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      tooltips.forEach(el => new bootstrap.Tooltip(el));
+    }, 300);
   }
 
   agregarCarga() {

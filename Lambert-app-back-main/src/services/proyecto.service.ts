@@ -1,6 +1,6 @@
 // src/services/proyecto.service.ts
 import { ProyectoRepository } from '../repositories/proyecto.repository';
-import { DatosFormularioProyecto, ResultadosCalculo, ProyectoCompletoParaGuardar } from '../types/proyecto.types';
+import { DatosFormularioProyecto, ResultadosCalculo, ProyectoCompletoParaGuardar, Recomendacion, DiagramaCargaData } from '../types/proyecto.types';
 
 // ============================================================================
 // Constantes normativas y parámetros fijos
@@ -14,6 +14,11 @@ const NORMAS = {
   TOLERANCIA_CHASIS: 10, // mm de margen para considerar "sin cambio"
 };
 
+interface RecomendacionesOutput {
+  observaciones: string[];
+  soluciones: Recomendacion[];
+}
+
 export class ProyectoService {
 
   public async generarSimulacion(datos: DatosFormularioProyecto): Promise<ResultadosCalculo> {
@@ -23,165 +28,232 @@ export class ProyectoService {
 
     const tipo = tipoEntrada === '6x2' ? '6x2' : '4x2';
 
-    // ------------------------------------------------------------------------
-    // Determinar PBT: menor entre el informado y el normativo
-    // ------------------------------------------------------------------------
-    const maxNormativo = tipo === '6x2'
-      ? NORMAS.PBT_MAX_6x2
-      : NORMAS.PBT_MAX_4x2;
+    // ==========================================================================
+    // FASE 0: VARIABLES DE ENTRADA
+    // ==========================================================================
 
+    // Límites legales según tipo de camión
+    const pbtMaxNormativo = tipo === '6x2' ? NORMAS.PBT_MAX_6x2 : NORMAS.PBT_MAX_4x2;
+    const maxEjeDelantero = tipo === '6x2'
+      ? pbtMaxNormativo * (NORMAS.PORCENTAJE_6x2 / 100)
+      : pbtMaxNormativo * (NORMAS.PORCENTAJE_4x2 / 100);
+    const maxEjeTrasero = pbtMaxNormativo - maxEjeDelantero;
+
+    // PBT: menor entre el informado y el normativo
     const pbtEntrada = datos?.configuracion?.pbt;
+    const pbt = typeof pbtEntrada === 'number' && !isNaN(pbtEntrada)
+      ? Math.min(pbtEntrada, pbtMaxNormativo)
+      : pbtMaxNormativo;
 
-    const pbt =
-      typeof pbtEntrada === 'number' && !isNaN(pbtEntrada)
-        ? Math.min(pbtEntrada, maxNormativo)
-        : maxNormativo;
+    // Medidas del camión
+    const taraDelantera = datos.configuracion.peso_eje_delantero;
+    const taraTrasera = datos.configuracion.peso_eje_trasero;
+    const distEjes = datos.configuracion.distancia_entre_ejes;
+    const volDelantero = datos.configuracion.voladizo_delantero;
+    const volTrasero = datos.configuracion.voladizo_trasero;
+    const espaldaCabina = datos.configuracion.distancia_primer_eje_espalda_cabina;
 
-    // ------------------------------------------------------------------------
-    // CARGAS MÁXIMAS POR EJE SEGÚN NORMA
-    // ------------------------------------------------------------------------
-    const porcentajeDelantero =
-      tipo === '6x2'
-        ? NORMAS.PORCENTAJE_6x2 / 100
-        : NORMAS.PORCENTAJE_4x2 / 100;
-
-    const porcentajeTrasero = 1 - porcentajeDelantero;
-
-    const cargaMaxEjeDelantero = pbt * porcentajeDelantero;
-    const cargaMaxEjeTrasero = pbt * porcentajeTrasero;
-
-    // ------------------------------------------------------------------------
-    // CARGAS REALES
-    // ------------------------------------------------------------------------
-    const cargaEjeDelantero = cargaMaxEjeDelantero - datos.configuracion.peso_eje_delantero;
-    const cargaEjeTrasero = cargaMaxEjeTrasero - datos.configuracion.peso_eje_trasero;
-
-    // ------------------------------------------------------------------------
-    // CARGA EXTRA TOTAL
-    // ------------------------------------------------------------------------
+    // Carrocería y cargas extras
+    const sepCabina = datos.carroceria.separacion_cabina_carroceria;
+    const largoCarroceria = datos.carroceria.largo_carroceria;
     const cargaExtraTotal = (datos.cargas_extra || []).reduce(
-      (sum, c) => sum + (c.peso || 0),
-      0
+      (sum, c) => sum + (c.peso || 0), 0
     );
 
-    // ------------------------------------------------------------------------
-    // CARGA TOTAL
-    // ------------------------------------------------------------------------
-    const cargaTotal = cargaEjeDelantero + cargaEjeTrasero - cargaExtraTotal;
+    // Centro de masa ponderado de TODAS las cargas extra
+    let posCargaExtra = 0;
+    if (datos.cargas_extra && datos.cargas_extra.length > 0) {
+      const momentoTotalCargas = datos.cargas_extra.reduce((sum, c) =>
+        sum + (c.peso || 0) * (c.distancia_eje_delantero || 0), 0);
+      posCargaExtra = cargaExtraTotal > 0 ? momentoTotalCargas / cargaExtraTotal : 0;
+    }
 
-    // ------------------------------------------------------------------------
-    // CENTRO DE CARGA TOTAL
-    // ------------------------------------------------------------------------
-    const distanciaEjes = datos.configuracion.distancia_entre_ejes;
-    const distanciaCargaExtra =
-      (datos.cargas_extra && datos.cargas_extra.length > 0)
-        ? datos.cargas_extra[0].distancia_eje_delantero
-        : 0;
+    // ==========================================================================
+    // FASE 1: DIAGNÓSTICO REAL (Fórmula de Oro de Gian — Celda N64)
+    // Sumatoria de momentos pivotando sobre el eje trasero
+    // ==========================================================================
 
-    const centroCargaTotal =
-      ((distanciaEjes * cargaMaxEjeTrasero) -
-        (cargaExtraTotal * distanciaCargaExtra) -
-        (datos.configuracion.peso_eje_trasero * distanciaEjes)) /
-      (cargaTotal || 1);
+    // 1. Capacidades útiles
+    const capLibreDelantera = maxEjeDelantero - taraDelantera;
+    const capLibreTrasera = maxEjeTrasero - taraTrasera;
+    const cargaUtilCarroceria = (capLibreDelantera + capLibreTrasera) - cargaExtraTotal;
 
-    // ------------------------------------------------------------------------
-    // CENTRO DE CARGA CARROCERÍA
-    // ------------------------------------------------------------------------
-    const centroCargaCarroceria =
-      datos.configuracion.distancia_primer_eje_espalda_cabina +
-      datos.carroceria.separacion_cabina_carroceria +
-      datos.carroceria.largo_carroceria / 2;
+    // 2. Centro de carga de la carrocería
+    const centroCargaCaja = espaldaCabina + sepCabina + (largoCarroceria / 2);
 
-    // ------------------------------------------------------------------------
-    // ALARGAR / CORTAR CHASIS
-    // ------------------------------------------------------------------------
-    const diferenciaChasis =
-      (datos.configuracion.distancia_primer_eje_espalda_cabina +
-        datos.carroceria.separacion_cabina_carroceria +
-        datos.carroceria.largo_carroceria) -
-      (datos.configuracion.distancia_entre_ejes + datos.configuracion.voladizo_trasero);
+    // 3. FÓRMULA MAESTRA — Peso real en el eje delantero mediante fuerza de palanca
+    const momentoCarroceria = cargaUtilCarroceria * (distEjes - centroCargaCaja);
+    const momentoTaraDel = taraDelantera * distEjes;
+    const momentoCargaExtra = cargaExtraTotal * (distEjes - posCargaExtra);
 
-    const modificacionChasis =
-      diferenciaChasis > NORMAS.TOLERANCIA_CHASIS
-        ? `alargar ${Math.round(diferenciaChasis)} mm el chasis`
-        : diferenciaChasis < -NORMAS.TOLERANCIA_CHASIS
-          ? `cortar ${Math.abs(Math.round(diferenciaChasis))} mm el chasis`
+    const pesoRealDelantero = (momentoCarroceria + momentoTaraDel + momentoCargaExtra) / distEjes;
+
+    // 4. Porcentajes reales
+    const porcentajeRealDelantero = (pesoRealDelantero / pbt) * 100;
+    const porcentajeRealTrasero = 100 - porcentajeRealDelantero;
+
+    // Cargas calculadas por eje (peso real - tara)
+    const cargaEjeDelantero = pesoRealDelantero - taraDelantera;
+    const cargaEjeTrasero = (pbt - pesoRealDelantero) - taraTrasera;
+
+    // ==========================================================================
+    // FASE 2: SOLUCIÓN — Cálculo del desplazamiento del eje (Celda N54)
+    // ==========================================================================
+
+    const momentosCargas = (cargaExtraTotal * posCargaExtra) + (cargaUtilCarroceria * centroCargaCaja);
+    const pesoObjetivoTraseroLibre = maxEjeTrasero - taraTrasera;
+
+    const nuevaDistEjes = pesoObjetivoTraseroLibre > 0
+      ? momentosCargas / pesoObjetivoTraseroLibre
+      : distEjes;
+
+    const desplazamientoEje = nuevaDistEjes - distEjes;
+
+    // ==========================================================================
+    // FASE 3: GEOMETRÍA — Chasis y voladizo (Celdas F58, F64, F65, F66)
+    // ==========================================================================
+
+    // 1. Alargar o cortar chasis
+    const espacioNecesario = espaldaCabina + sepCabina + largoCarroceria;
+    const espacioDisponible = distEjes + volTrasero;
+    const modifChasis = espacioNecesario - espacioDisponible;
+
+    const modificacionChasisTexto =
+      modifChasis > NORMAS.TOLERANCIA_CHASIS
+        ? `alargar ${Math.round(modifChasis)} mm el chasis`
+        : modifChasis < -NORMAS.TOLERANCIA_CHASIS
+          ? `cortar ${Math.abs(Math.round(modifChasis))} mm el chasis`
           : 'Sin cambios';
 
-    // ------------------------------------------------------------------------
-    // NUEVA DISTANCIA ENTRE EJES
-    // ------------------------------------------------------------------------
-    const nuevaDistanciaEntreEjes =
-      ((cargaExtraTotal * distanciaCargaExtra) +
-        (cargaTotal * centroCargaCarroceria)) /
-      ((cargaMaxEjeTrasero - datos.configuracion.peso_eje_trasero) || 1);
+    // 2. Voladizo trasero resultante
+    // a) Sin mover el eje
+    const voladizoTraseroCalculado = espacioNecesario - distEjes;
 
-    // ------------------------------------------------------------------------
-    // DESPLAZAMIENTO DEL EJE
-    // ------------------------------------------------------------------------
-    const desplazamientoEje =
-      nuevaDistanciaEntreEjes - datos.configuracion.distancia_entre_ejes;
+    // b) Con desplazamiento del eje
+    const voladizoConDesplazamiento = volTrasero - desplazamientoEje + modifChasis;
+    const pctVoladizoConDesplazamiento = nuevaDistEjes > 0
+      ? (voladizoConDesplazamiento * 100) / nuevaDistEjes
+      : 0;
 
-    // ------------------------------------------------------------------------
+    // 3. Largo final del camión armado
+    const largoTotalCamion = volDelantero + distEjes + volTrasero + modifChasis;
+
+    // Centro de carga total (para diagrama)
+    const centroCargaTotal = centroCargaCaja;
+
+    // ==========================================================================
     // VERIFICACIONES
-    // ------------------------------------------------------------------------
+    // ==========================================================================
+
     const verificacionDistribucion = this.verificarDistribucionCarga(
       tipo,
-      porcentajeDelantero * 100
+      porcentajeRealDelantero
     );
 
-    const voladizoTraseroCalculado =
-      (datos.configuracion.distancia_primer_eje_espalda_cabina +
-        datos.carroceria.separacion_cabina_carroceria +
-        datos.carroceria.largo_carroceria) -
-      datos.configuracion.distancia_entre_ejes;
-
     const verificacionVoladizo = this.verificarVoladizoTrasero(
-      datos.configuracion.distancia_entre_ejes,
+      distEjes,
       voladizoTraseroCalculado
     );
 
-    // ------------------------------------------------------------------------
+    // ==========================================================================
     // RECOMENDACIONES
-    // ------------------------------------------------------------------------
+    // ==========================================================================
+
     const recomendaciones = this.generarRecomendaciones(
       verificacionDistribucion,
       verificacionVoladizo,
-      modificacionChasis,
-      desplazamientoEje
+      modificacionChasisTexto,
+      desplazamientoEje,
+      {
+        cargaExtraTotal,
+        posCargaExtra,
+        centroCargaCaja,
+        distEjes,
+        tipo,
+        cargasExtraCount: (datos.cargas_extra || []).length,
+        cargaEjeDelantero,
+        cargaEjeTrasero,
+        pbt,
+        maxNormativo: pbtMaxNormativo,
+        pesoRealDelantero,
+        pesoRealTrasero: pbt - pesoRealDelantero,
+        taraDelantera,
+        taraTrasera,
+        maxEjeDelantero,
+        maxEjeTrasero,
+        nuevaDistEjes,
+        pctVoladizoConDesplazamiento,
+      }
     );
 
-    // ------------------------------------------------------------------------
+    // ==========================================================================
+    // DIAGRAMA DE CARGA — Datos para renderizado SVG proporcional
+    // ==========================================================================
+
+    const diagramaCarga: DiagramaCargaData = {
+      posicionEjeDelantero: 0,
+      posicionEjeTrasero: distEjes,
+      posicionCabinaInicio: -volDelantero,
+      posicionCabinaFin: 0,
+      posicionCarroceriaInicio: espaldaCabina + sepCabina,
+      posicionCarroceriaFin: espaldaCabina + sepCabina + largoCarroceria,
+      posicionCentroCargaCarroceria: centroCargaCaja,
+      posicionCentroCargaTotal: centroCargaTotal,
+      voladizoDelantero: volDelantero,
+      voladizoTrasero: voladizoTraseroCalculado,
+      largoTotal: largoTotalCamion,
+      cargaMaxEjeDelantero: maxEjeDelantero,
+      cargaMaxEjeTrasero: maxEjeTrasero,
+      pesoEjeDelantero: taraDelantera,
+      pesoEjeTrasero: taraTrasera,
+      cargaUtilDelantero: cargaEjeDelantero,
+      cargaUtilTrasero: cargaEjeTrasero,
+      porcentajeUsoEjeDelantero:
+        maxEjeDelantero > 0 ? (pesoRealDelantero / maxEjeDelantero) * 100 : 0,
+      porcentajeUsoEjeTrasero:
+        maxEjeTrasero > 0 ? ((pbt - pesoRealDelantero) / maxEjeTrasero) * 100 : 0,
+      cargasExtra: (datos.cargas_extra || []).map((c) => ({
+        descripcion: c.descripcion,
+        peso: c.peso,
+        posicion: c.distancia_eje_delantero,
+      })),
+      tipoCamion: tipo as '4x2' | '6x2',
+    };
+
+    // ==========================================================================
     // RESULTADOS
-    // ------------------------------------------------------------------------
+    // ==========================================================================
+
     return {
       resultado_peso_bruto_total_maximo: pbt,
       resultado_carga_eje_delantero_calculada: cargaEjeDelantero,
       resultado_carga_eje_trasero_calculada: cargaEjeTrasero,
-      resultado_porcentaje_carga_eje_delantero: porcentajeDelantero * 100,
-      resultado_modificacion_chasis: modificacionChasis,
+      resultado_porcentaje_carga_eje_delantero: porcentajeRealDelantero,
+      resultado_modificacion_chasis: modificacionChasisTexto,
       resultado_voladizo_trasero_calculado: voladizoTraseroCalculado,
-      resultado_largo_final_camion:
-        datos.configuracion.voladizo_delantero +
-        distanciaEjes +
-        voladizoTraseroCalculado,
+      resultado_largo_final_camion: largoTotalCamion,
       resultado_centro_carga_total: centroCargaTotal,
-      resultado_centro_carga_carroceria: centroCargaCarroceria,
-      resultado_nueva_distancia_entre_ejes: nuevaDistanciaEntreEjes,
+      resultado_centro_carga_carroceria: centroCargaCaja,
+      resultado_nueva_distancia_entre_ejes: nuevaDistEjes,
       resultado_desplazamiento_eje: desplazamientoEje,
       verificacion_distribucion_carga_ok: verificacionDistribucion.ok,
       verificacion_voladizo_trasero_ok: verificacionVoladizo.ok,
-      recomendaciones,
+      recomendaciones: recomendaciones.soluciones,
+      observaciones: recomendaciones.observaciones,
+      diagramaCarga,
     };
   }
 
   // ==========================================================================
   // GUARDAR PROYECTO COMPLETO
   // ==========================================================================
-  public async guardarProyectoCompleto(proyecto: ProyectoCompletoParaGuardar) {
-    console.log("[SERVICE] Guardando proyecto...");
-    const repo = new ProyectoRepository();
-    return await ProyectoRepository.create(proyecto);
+  public async guardarProyectoCompleto(proyecto: ProyectoCompletoParaGuardar): Promise<{ pedido_id: number; calculo_id: number; tipo: string }> {
+    try {
+      return await ProyectoRepository.create(proyecto);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al guardar el proyecto';
+      throw new Error(message);
+    }
   }
 
   // ==========================================================================
@@ -190,7 +262,7 @@ export class ProyectoService {
   private verificarDistribucionCarga(tipoCamion: string, porcentaje: number) {
     let min = 0, max = 0;
     if (tipoCamion === '4x2') { min = 30; max = 36; }
-    if (tipoCamion === '6x2') { min = 25; max = 25; }
+    if (tipoCamion === '6x2') { min = 23; max = 27; }
 
     const ok = porcentaje >= min && porcentaje <= max;
     return {
@@ -220,56 +292,205 @@ export class ProyectoService {
   }
 
   private generarRecomendaciones(
-    verifCarga: { ok: boolean; mensaje: string },
+    verifCarga: { ok: boolean; mensaje: string; rango?: { min: number; max: number }; porcentaje: number },
     verifVoladizo: { ok: boolean; mensaje: string; limite?: number; voladizo?: number; exceso?: number },
     modifChasis: string,
-    desplazamientoEje: number
-  ): string[] {
+    desplazamientoEje: number,
+    datos?: {
+      cargaExtraTotal: number;
+      posCargaExtra: number;
+      centroCargaCaja: number;
+      distEjes: number;
+      tipo: string;
+      cargasExtraCount: number;
+      cargaEjeDelantero: number;
+      cargaEjeTrasero: number;
+      pbt: number;
+      maxNormativo: number;
+      pesoRealDelantero: number;
+      pesoRealTrasero: number;
+      taraDelantera: number;
+      taraTrasera: number;
+      maxEjeDelantero: number;
+      maxEjeTrasero: number;
+      nuevaDistEjes: number;
+      pctVoladizoConDesplazamiento: number;
+    }
+  ): RecomendacionesOutput {
 
-    if (verifCarga.ok && verifVoladizo.ok && modifChasis === 'Sin cambios' && Math.abs(desplazamientoEje) < 10) {
-      return ['El diseño cumple con todas las normativas verificadas.'];
+    const observaciones: string[] = [];
+    const soluciones: Recomendacion[] = [];
+
+    if (verifCarga.ok && verifVoladizo.ok && modifChasis === 'Sin cambios') {
+      observaciones.push('El diseño cumple con todas las normativas verificadas.');
+      return { observaciones, soluciones };
     }
 
-    const rec: string[] = [];
-    rec.push('• Observaciones detectadas:');
-
+    // --- Observaciones ---
     if (!verifVoladizo.ok && verifVoladizo.exceso && verifVoladizo.limite !== undefined) {
-      rec.push(
-        `     - El voladizo trasero excede el máximo permitido en ${Math.round(verifVoladizo.exceso)} mm ` +
+      observaciones.push(
+        `Voladizo trasero excede el máximo permitido en ${Math.round(verifVoladizo.exceso)} mm ` +
         `(actual: ${Math.round(verifVoladizo.voladizo || 0)} mm, máximo: ${Math.round(verifVoladizo.limite)} mm).`
       );
     }
 
     if (!verifCarga.ok) {
-      rec.push(`     - Distribución de carga fuera de norma: ${verifCarga.mensaje}`);
+      observaciones.push(`Distribución de carga fuera de norma: ${verifCarga.mensaje}`);
     }
 
-    rec.push('-');
-    rec.push('• Posibles soluciones:');
+    if (datos && datos.cargaEjeDelantero < 0) {
+      observaciones.push(`El eje delantero está sobrecargado en ${Math.round(-datos.cargaEjeDelantero)} kg.`);
+    }
 
-    const opciones: string[] = [];
-    const despl = Math.round(Math.abs(desplazamientoEje));
-    const sentido = desplazamientoEje > 0 ? 'hacia atrás' : 'hacia adelante';
+    if (datos && datos.cargaEjeTrasero < 0) {
+      observaciones.push(`El eje trasero está sobrecargado en ${Math.round(-datos.cargaEjeTrasero)} kg.`);
+    }
 
-    if (!verifVoladizo.ok) {
-      if (despl >= 10) {
-        opciones.push(`Desplazar el eje trasero ${despl} mm ${sentido} para corregir el voladizo.`);
+    const opcionesP1: { texto: string; tipo: Recomendacion['tipo'] }[] = [];
+    const opcionesP2: { texto: string; tipo: Recomendacion['tipo'] }[] = [];
+    const opcionesP3: { texto: string; tipo: Recomendacion['tipo'] }[] = [];
+
+    // ============================================================
+    // PRIORIDAD 1: Soluciones que NO requieren cambiar el camión
+    // ============================================================
+
+    // --- Soluciones para voladizo excedido ---
+    if (!verifVoladizo.ok && verifVoladizo.exceso) {
+      const exceso = verifVoladizo.exceso;
+
+      opcionesP1.push({
+        texto: `Reducir el largo de la carrocería en ${Math.round(exceso)} mm.`,
+        tipo: 'reducir_largo_carroceria'
+      });
+
+      if (datos) {
+        const reduccionSepPosible = Math.min(exceso, datos.centroCargaCaja - datos.distEjes * 0.3);
+        if (reduccionSepPosible > 10) {
+          opcionesP1.push({
+            texto: `Reducir la separación cabina-carrocería en ${Math.round(reduccionSepPosible)} mm.`,
+            tipo: 'ajustar_separacion'
+          });
+        }
       }
-      if (modifChasis !== 'Sin cambios') {
-        opciones.push(`${modifChasis} para corregir la longitud del chasis.`);
+    }
+
+    // --- Soluciones para distribución fuera de norma ---
+    // Con la fórmula de Gian, el porcentaje real depende del PBT, tipo de camión,
+    // tara de ejes, carrocería y cargas extra. El desplazamiento del eje SÍ afecta
+    // el porcentaje porque cambia la palanca de momentos.
+    if (!verifCarga.ok && datos) {
+      const rango = verifCarga.rango;
+      const porcentajeActual = verifCarga.porcentaje;
+
+      if (rango && porcentajeActual < rango.min) {
+        // Porcentaje demasiado bajo → el peso delantero es muy bajo relativo al PBT
+        // PBT_nec = pesoRealDelantero / (min/100)
+        // Si PBT_nec < PBT_actual → hay que REDUCIR el PBT
+        // Si PBT_nec > PBT_actual → hay que AUMENTAR el PBT
+        const minRatio = rango.min / 100;
+        const pbtNecesario = datos.pesoRealDelantero / minRatio;
+
+        if (pbtNecesario > datos.maxNormativo || !isFinite(pbtNecesario) || pbtNecesario < 0) {
+          opcionesP3.push({
+            texto: `No es posible cumplir la norma con este camión. Se necesitaría un PBT de ${isFinite(pbtNecesario) && pbtNecesario > 0 ? Math.round(pbtNecesario) : 'imposible'} kg para alcanzar el ${rango.min}%, pero el máximo normativo es ${datos.maxNormativo} kg. Se requiere un camión con menor tara en el eje delantero o mayor tara en el eje trasero.`,
+            tipo: 'mayor_pbt'
+          });
+        } else if (pbtNecesario < datos.pbt) {
+          opcionesP3.push({
+            texto: `Reducir el PBT a ${Math.round(pbtNecesario)} kg. Con el PBT actual (${datos.pbt} kg), la carga en el eje delantero representa solo ${porcentajeActual.toFixed(1)}% (mínimo ${rango.min}%). Un PBT menor aumenta el porcentaje relativo del peso delantero.`,
+            tipo: 'mayor_pbt'
+          });
+        } else {
+          opcionesP3.push({
+            texto: `Aumentar el PBT a ${Math.round(pbtNecesario)} kg. Con el PBT actual (${datos.pbt} kg), la carga en el eje delantero es insuficiente (${porcentajeActual.toFixed(1)}% vs mínimo ${rango.min}%).`,
+            tipo: 'mayor_pbt'
+          });
+        }
+      } else if (rango && porcentajeActual > rango.max) {
+        // Porcentaje demasiado alto → hay que DISMINUIR carga en eje delantero
+        if (datos.tipo === '4x2') {
+          opcionesP3.push({
+            texto: `Considerar cambiar a un camión 6x2. El 4x2 concentra más carga en el eje delantero (${porcentajeActual.toFixed(1)}%). El 6x2 distribuye más carga en los ejes traseros (25% en delantero).`,
+            tipo: 'cambiar_a_6x2'
+          });
+        }
+        opcionesP3.push({
+          texto: `Reducir el PBT ingresado. Con el PBT actual, la carga en el eje delantero excede el máximo permitido (${porcentajeActual.toFixed(1)}% vs máximo ${rango.max}%).`,
+          tipo: 'mayor_pbt'
+        });
       }
     }
 
-    if (!verifVoladizo.ok && opciones.length === 0 && !verifCarga.ok) {
-      opciones.push(`Revisar la distribución de peso y considerar desplazar el eje ${sentido} ${despl} mm.`);
+    // --- Soluciones para carga negativa ---
+    if (datos) {
+      if (datos.cargaEjeDelantero < 0) {
+        opcionesP3.push({
+          texto: `El eje delantero está sobrecargado en ${Math.round(-datos.cargaEjeDelantero)} kg. El PBT es insuficiente para la configuración. Aumentar el PBT o seleccionar un camión con menor tara en el eje delantero.`,
+          tipo: 'mayor_pbt'
+        });
+      }
+      if (datos.cargaEjeTrasero < 0) {
+        opcionesP3.push({
+          texto: `El eje trasero está sobrecargado en ${Math.round(-datos.cargaEjeTrasero)} kg. El PBT es insuficiente para la configuración. Aumentar el PBT o seleccionar un camión con menor tara en el eje trasero.`,
+          tipo: 'mayor_pbt'
+        });
+      }
     }
 
-    if (opciones.length === 0 && !verifCarga.ok) {
-      opciones.push(verifCarga.mensaje);
+    // ============================================================
+    // PRIORIDAD 2: Soluciones que requieren modificar el chasis
+    // ============================================================
+
+    if (!verifVoladizo.ok && modifChasis !== 'Sin cambios') {
+      opcionesP2.push({
+        texto: `${modifChasis} para corregir la longitud del chasis.`,
+        tipo: 'modificar_chasis'
+      });
     }
 
-    opciones.forEach((op, i) => rec.push(`     Opción ${i + 1}: ${op}`));
+    // Recomendación de desplazar el eje (ahora SÍ es válida con la fórmula de Gian)
+    if (Math.abs(desplazamientoEje) >= 10 && datos) {
+      const sentido = desplazamientoEje > 0 ? 'hacia atrás' : 'hacia adelante';
+      const pctVoladizo = datos.pctVoladizoConDesplazamiento;
+      const voladizoOk = pctVoladizo <= 60;
 
-    return rec;
+      if (voladizoOk) {
+        opcionesP2.push({
+          texto: `Desplazar el eje trasero ${Math.round(Math.abs(desplazamientoEje))} mm ${sentido}. Esto ajusta la distribución de carga al rango normativo sin exceder el voladizo máximo (${pctVoladizo.toFixed(1)}%).`,
+          tipo: 'desplazar_eje'
+        });
+      } else {
+        opcionesP2.push({
+          texto: `Desplazar el eje trasero ${Math.round(Math.abs(desplazamientoEje))} mm ${sentido} corrige la distribución, pero el voladizo resultante (${pctVoladizo.toFixed(1)}%) excede el 60% permitido. Se requiere combinar con reducción de carrocería.`,
+          tipo: 'desplazar_eje'
+        });
+      }
+    }
+
+    // ============================================================
+    // PRIORIDAD 3: Soluciones que requieren cambiar el camión
+    // ============================================================
+
+    if ((datos && (datos.cargaEjeDelantero < 0 || datos.cargaEjeTrasero < 0))) {
+      opcionesP3.push({
+        texto: 'El camión seleccionado no tiene capacidad suficiente para esta configuración. Considerar un modelo con mayor PBT o diferentes taras de eje.',
+        tipo: 'mayor_pbt'
+      });
+    }
+
+    // --- Fallback ---
+    if (opcionesP1.length === 0 && opcionesP2.length === 0 && opcionesP3.length === 0) {
+      opcionesP1.push({
+        texto: 'Revisar los parámetros de configuración y consultar con el área de ingeniería.',
+        tipo: 'revisar_configuracion'
+      });
+    }
+
+    // Construir array de soluciones con prioridad
+    opcionesP1.forEach(s => soluciones.push({ ...s, prioridad: 1 }));
+    opcionesP2.forEach(s => soluciones.push({ ...s, prioridad: 2 }));
+    opcionesP3.forEach(s => soluciones.push({ ...s, prioridad: 3 }));
+
+    return { observaciones, soluciones };
   }
 }

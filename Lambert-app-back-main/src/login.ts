@@ -2,9 +2,11 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
-import { UserRepository } from '../user-repository';
+import { UserRepository } from './repositories/user.repository';
 import { SECRET_JWT_KEY } from '../config';
 import authenticateToken from './middleware/auth';
+import { AuthenticatedRequest } from './types/express.types';
+import logger from './utils/logger';
 
 const router = express.Router();
 
@@ -57,14 +59,16 @@ router.post('/login', loginLimiter, async (req, res) => {
         id: user.id  // El frontend recibe el DNI en este campo 'id'
       });
 
-  } catch (error: any) {
-    res.status(401).json({ error: error.message || 'Login failed' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Login failed';
+    logger.error('Error en login:', error);
+    res.status(401).json({ error: message });
   }
 });
 
 // STATUS / IS LOGGED IN
 router.get('/status', authenticateToken, (req, res) => {
-  const user = (req as any).user;
+  const user = (req as AuthenticatedRequest).user;
   res.json({ 
     loggedIn: true, 
     user: {
@@ -82,8 +86,10 @@ router.post('/register', registerLimiter, async (req, res) => {
   try {
     const userId = await UserRepository.create({ dni, nombre, email, password, rol });
     res.status(201).json({ message: 'Usuario creado', id: userId });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || 'Registration failed' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Registration failed';
+    logger.error('Error en registro:', error);
+    res.status(400).json({ error: message });
   }
 });
 

@@ -1,18 +1,19 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CamionService } from '../../../services/camion.service';
+import { BreadcrumbComponent } from '../../../shared/breadcrumb/breadcrumb.component';
 
 @Component({
   selector: 'app-alta-camion',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, BreadcrumbComponent],
   templateUrl: './alta-camiones.html',
   styleUrls: ['./alta-camiones.scss'],
 })
 export class AltaCamionComponent {
-  form;
+  form: FormGroup;
   cargando = false;
   error: string | null = null;
   anoActual = new Date().getFullYear();

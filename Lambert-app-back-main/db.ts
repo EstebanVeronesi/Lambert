@@ -1,13 +1,13 @@
+// db.ts - Conexión a PostgreSQL con configuración centralizada
 import pkg from 'pg';
+import { DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT } from './config';
+
 const { Pool } = pkg;
 
 export const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'lambert',
-  password: process.env.DB_PASSWORD || '159753',
-  port: Number(process.env.DB_PORT) || 5432,
+  user: DB_USER,
+  host: DB_HOST,
+  database: DB_NAME,
+  password: DB_PASSWORD,
+  port: DB_PORT,
 });
-
-// Ejemplo de uso:
-// const res = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);

@@ -1,43 +1,83 @@
 <div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Clientes'}]"></app-breadcrumb>
 
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="page-title mb-0">Clientes</h1>
-    <a routerLink="/clientes/alta" class="btn btn-primary">
-      Nuevo Cliente
-    </a>
-  </div>
-
-  <div class="card">
-    <div class="card-body p-0">
-
-      @if (clientes.length > 0) {
-
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>CUIT</th>
-              <th>Razón Social</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (cliente of clientes; track cliente.cuit) {
-              <tr>
-                <td>{{ cliente.cuit }}</td>
-                <td>{{ cliente.razon_social }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-
-      } @else {
-
-        <div class="empty-state">
-          No hay clientes cargados.
-        </div>
-
-      }
-
+    <div>
+      <h1 class="page-title mb-1">Clientes</h1>
+      <p class="page-subtitle">Gestión de clientes registrados</p>
     </div>
+    <a routerLink="/clientes/alta" class="btn btn-primary">+ Nuevo cliente</a>
   </div>
 
+  <!-- Search Bar -->
+  <div class="search-bar mb-3">
+    <input type="text" class="form-control search-input" placeholder="Buscar por razón social..." [(ngModel)]="filtro" (input)="filtrar()">
+  </div>
+
+  <!-- Estado de carga -->
+  @if (cargando) {
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="p-3">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Estado de error -->
+  @if (error && !cargando) {
+    <div class="feedback-message feedback-error">{{ error }}</div>
+  }
+
+  <!-- Tabla -->
+  @if (!cargando && !error) {
+    <div class="card">
+      <div class="card-body p-0">
+
+        @if (paginatedItems.length > 0) {
+
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>CUIT</th>
+                <th>Razón Social</th>
+                @if (currentUser?.rol === 'admin') {
+                  <th style="width:100px">Acciones</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (cliente of paginatedItems; track cliente.cuit) {
+                <tr>
+                  <td>{{ cliente.cuit }}</td>
+                  <td>{{ cliente.razon_social }}</td>
+                  @if (currentUser?.rol === 'admin') {
+                    <td>
+                      <button class="btn btn-outline-danger btn-sm" (click)="confirmarEliminar(cliente.cuit)">
+                        🗑️ Eliminar
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+
+        } @else {
+
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <p>No hay clientes cargados.</p>
+          </div>
+
+        }
+
+      </div>
+    </div>
+
+    <app-pagination [page]="page" [totalPages]="totalPages" (pageChange)="onPageChange($event)"></app-pagination>
+  }
 </div>

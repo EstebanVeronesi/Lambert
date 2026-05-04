@@ -1,8 +1,11 @@
 <div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Usuarios', link: '/usuarios'}, {label: 'Nuevo usuario'}]"></app-breadcrumb>
 
   <div class="form-wrapper">
-
-    <h1 class="page-title text-center">Nuevo Usuario</h1>
+    <div class="mb-4">
+      <h1 class="page-title text-center mb-1">Nuevo Usuario</h1>
+      <p class="page-subtitle text-center">Complete los datos del usuario</p>
+    </div>
 
     <form [formGroup]="registerForm" (ngSubmit)="register()">
 

@@ -1,34 +1,122 @@
-<div class="page-container container" *ngIf="camion">
-  <div class="form-wrapper resultados">
-    <h1 class="page-title">
-      Detalle del Camión
-      {{ camion.marca_camion }} {{ camion.modelo_camion }}
-      <span *ngIf="!camion">#{{ camionId }}</span>
-    </h1>
+<div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Camiones', link: '/camiones'}, {label: camion ? camion.marca_camion + ' ' + camion.modelo_camion : 'Detalle'}]"></app-breadcrumb>
 
-    <!-- Datos generales -->
-    <section>
-      <h4>Datos generales</h4>
-      <p>
-        <strong>Año:</strong> {{ camion.ano_camion }}<br>
-        <strong>Tipo:</strong> {{ camion.tipo_camion }}
-      </p>
-    </section>
-
-    <!-- Configuración -->
-    <section *ngIf="configuracion">
-      <h4>Configuración</h4>
-      <div class="tabla">
-        <div><span>Distancia entre ejes:</span> {{ configuracion.distancia_entre_ejes }} mm</div>
-        <div><span>Distancia primer eje espalda cabina:</span> {{ configuracion.distancia_primer_eje_espalda_cabina }} mm</div>
-        <div><span>Voladizo delantero:</span> {{ configuracion.voladizo_delantero }} mm</div>
-        <div><span>Voladizo trasero:</span> {{ configuracion.voladizo_trasero }} mm</div>
-        <div><span>Peso eje delantero:</span> {{ configuracion.peso_eje_delantero }} kg</div>
-        <div><span>Peso eje trasero:</span> {{ configuracion.peso_eje_trasero }} kg</div>
-        <div><span>PBT:</span> {{ configuracion.pbt }} kg</div>
-        <div><span>Ancho chasis 1:</span> {{ configuracion.ancho_chasis_1 }} mm</div>
-        <div><span>Ancho chasis 2:</span> {{ configuracion.ancho_chasis_2 }} mm</div>
+  <!-- Estado de carga -->
+  @if (cargando) {
+    <div class="card">
+      <div class="card-body">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-card mt-3"></div>
+        <div class="skeleton skeleton-card mt-3"></div>
       </div>
-    </section>
-  </div>
+    </div>
+  }
+
+  <!-- Estado de error -->
+  @if (error && !cargando) {
+    <div class="feedback-message feedback-error">{{ error }}</div>
+  }
+
+  <!-- Contenido -->
+  @if (!cargando && !error && camion) {
+    <div class="form-wrapper resultados">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h1 class="page-title mb-1">
+            {{ camion.marca_camion }} {{ camion.modelo_camion }}
+          </h1>
+          <p class="page-subtitle mb-0">Detalle del camión #{{ camion.id }}</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge-tipo-lg">{{ camion.tipo_camion }}</span>
+          @if (currentUser?.rol === 'admin') {
+            <button class="btn btn-outline-danger btn-sm" (click)="confirmarEliminar()">
+              🗑️ Eliminar
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Datos generales -->
+      <section class="section-card">
+        <div class="section-header">
+          <span class="section-icon">🚛</span>
+          <h4>Datos generales</h4>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Marca</span>
+            <span class="info-value">{{ camion.marca_camion }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Modelo</span>
+            <span class="info-value">{{ camion.modelo_camion }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Año</span>
+            <span class="info-value">{{ camion.ano_camion }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Tipo</span>
+            <span class="info-value">{{ camion.tipo_camion }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Configuración técnica -->
+      @if (configuracion) {
+        <section class="section-card">
+          <div class="section-header">
+            <span class="section-icon">⚙️</span>
+            <h4>Configuración técnica</h4>
+          </div>
+          <div class="config-grid">
+            <div class="config-item">
+              <span class="config-label">Distancia entre ejes</span>
+              <span class="config-value">{{ configuracion.distancia_entre_ejes | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Dist. primer eje espalda cabina</span>
+              <span class="config-value">{{ configuracion.distancia_primer_eje_espalda_cabina | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Voladizo delantero</span>
+              <span class="config-value">{{ configuracion.voladizo_delantero | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Voladizo trasero</span>
+              <span class="config-value">{{ configuracion.voladizo_trasero | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Peso eje delantero</span>
+              <span class="config-value">{{ configuracion.peso_eje_delantero | number:'1.0-0' }} kg</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Peso eje trasero</span>
+              <span class="config-value">{{ configuracion.peso_eje_trasero | number:'1.0-0' }} kg</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">PBT</span>
+              <span class="config-value">{{ configuracion.pbt | number:'1.0-0' }} kg</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Ancho chasis 1</span>
+              <span class="config-value">{{ configuracion.ancho_chasis_1 | number:'1.0-0' }} mm</span>
+            </div>
+            @if (configuracion.ancho_chasis_2) {
+              <div class="config-item">
+                <span class="config-label">Ancho chasis 2</span>
+                <span class="config-value">{{ configuracion.ancho_chasis_2 | number:'1.0-0' }} mm</span>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Botón volver -->
+      <div class="form-actions">
+        <a routerLink="/camiones" class="btn btn-secondary">← Volver a camiones</a>
+      </div>
+    </div>
+  }
 </div>

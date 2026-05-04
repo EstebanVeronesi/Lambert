@@ -5,40 +5,31 @@
     ".opencode/rules/global.md",
     ".opencode/rules/core-standards.md"
   ],
+  "provider": {
+    "opencode": {},
+    "opencode-go": {}
+  },
   "agent": {
     "architect": {
       "mode": "primary",
-      "model": "opencode/claude-opus-4-5",
+      "model": "opencode-go/qwen3.6-plus",
       "temperature": 0.2,
       "color": "#7c3aed",
       "permission": {
         "edit": "ask",
         "bash": "ask",
         "task": {
-          "*": "allow"
-        }
-      }
-    },
-    "developer": {
-      "mode": "subagent",
-      "model": "opencode/deepseek-v4-pro",
-      "temperature": 0.3,
-      "color": "#10b981",
-      "permission": {
-        "edit": "allow",
-        "bash": "allow",
-        "webfetch": "allow",
-        "skill": {
-          "*": "allow"
-        },
-        "task": {
-          "*": "allow"
+          "developer": "allow",
+          "context": "allow",
+          "guardian": "allow",
+          "analyst": "allow",
+          "designer": "allow"
         }
       }
     },
     "context": {
-      "mode": "subagent",
-      "model": "google/gemini-1.5-flash",
+      "mode": "all",
+      "model": "opencode/gemini-3-flash",
       "temperature": 0.1,
       "color": "#f59e0b",
       "permission": {
@@ -49,8 +40,8 @@
       }
     },
     "guardian": {
-      "mode": "subagent",
-      "model": "opencode/minimax-m2.5",
+      "mode": "all",
+      "model": "opencode-go/deepseek-v4-flash",
       "temperature": 0.1,
       "color": "#ef4444",
       "permission": {
@@ -62,6 +53,29 @@
           "npx eslint *": "allow",
           "ruff check *": "allow"
         }
+      }
+    },
+    "analyst": {
+      "mode": "all",
+      "model": "opencode/claude-sonnet-4-6",
+      "temperature": 0.1,
+      "color": "#0ea5e9",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "allow",
+        "websearch": "allow"
+      }
+    },
+    "designer": {
+      "mode": "all",
+      "model": "opencode-go/minimax-m2.7",
+      "temperature": 0.4,
+      "color": "#ec4899",
+      "permission": {
+        "edit": "allow",
+        "bash": "deny",
+        "webfetch": "allow"
       }
     }
   }

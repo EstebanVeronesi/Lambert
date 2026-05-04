@@ -117,10 +117,7 @@ export class Paso1CamionComponent {
       )
     ];
     this.modeloSeleccionado = '';
-    this.tipoSeleccionado = '';
     this.anoSeleccionado = '';
-
-    this.tiposDisponibles = [];
     this.anosDisponibles = [];
     
   }
@@ -142,9 +139,9 @@ export class Paso1CamionComponent {
       )
     ];
 
-    this.tipoSeleccionado = '';
     this.anosDisponibles = [];
     this.anoSeleccionado = '';
+    if (this.tipoSeleccionado) { this.filtrarAnos(); }
   }
 
   filtrarAnos() {
@@ -156,8 +153,8 @@ export class Paso1CamionComponent {
       ...new Set(
         this.camiones
           .filter(c =>
-            c.marca_camion === this.marcaSeleccionada &&
-            c.modelo_camion === this.modeloSeleccionado &&
+            (!this.marcaSeleccionada || c.marca_camion === this.marcaSeleccionada) &&
+            (!this.modeloSeleccionado || c.modelo_camion === this.modeloSeleccionado) &&
             c.tipo_camion === this.tipoSeleccionado
           )
           .map(c => c.ano_camion)

@@ -6,6 +6,7 @@ import { DatosFormularioProyecto } from '../types/proyecto.types';
 })
 export class FormDataService {
   private datosProyecto: DatosFormularioProyecto | null = null;
+  private datosReSimulacion: any = null;
 
   setDatosProyecto(datos: DatosFormularioProyecto) {
     this.datosProyecto = datos;
@@ -17,5 +18,13 @@ export class FormDataService {
 
   clearDatosProyecto() {
     this.datosProyecto = null;
+  }
+
+  setDatosReSimulacion(datos: any) {
+    this.datosReSimulacion = datos;
+  }
+
+  getDatosReSimulacion(): any {
+    return this.datosReSimulacion;
   }
 }

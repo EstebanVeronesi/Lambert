@@ -1,62 +1,202 @@
-<div class="dashboard-container container">
-  <h1 class="dashboard-title">Inicio</h1>
+<div class="page-container container">
 
-  <div class="dashboard-grid">
-
-    <!-- Pedidos -->
-    <div class="dashboard-card">
-      <div class="card-header-custom">
-        <h3>Pedidos</h3>
-        <button class="btn btn-sm btn-primary" routerLink="/formulario">
-          Nuevo
-        </button>
-      </div>
-      <button class="btn btn-outline-custom w-100" routerLink="/mis-pedidos">
-        Ver pedidos
-      </button>
-    </div>
-
-    <!-- Clientes -->
-    <div class="dashboard-card">
-      <div class="card-header-custom">
-        <h3>Clientes</h3>
-        <button class="btn btn-sm btn-primary" routerLink="/clientes/alta">
-          Nuevo
-        </button>
-      </div>
-      <button class="btn btn-outline-custom w-100" routerLink="/clientes">
-        Ver clientes
-      </button>
-    </div>
-
-    <!-- Usuarios (solo admin) -->
-    <div class="dashboard-card" *ngIf="currentUser?.rol === 'admin'">
-      <div class="card-header-custom">
-        <h3>Usuarios</h3>
-        <button class="btn btn-sm btn-primary" routerLink="/registrar-cuenta">
-          Nuevo
-        </button>
-      </div>
-      <button class="btn btn-outline-custom w-100" routerLink="/usuarios">
-        Ver usuarios
-      </button>
-    </div>
-
-    <!-- Camiones -->
-    <div class="dashboard-card">
-      <div class="card-header-custom">
-        <h3>Camiones</h3>
-        <button 
-          *ngIf="currentUser?.rol === 'admin'" 
-          class="btn btn-sm btn-primary" 
-          routerLink="/camiones/alta">
-          Nuevo
-        </button>
-      </div>
-      <button class="btn btn-outline-custom w-100" routerLink="/camiones">
-        Ver camiones
-      </button>
-    </div>
-
+  <div class="dashboard-header">
+    <h1>Panel de control</h1>
+    <p>Bienvenido, {{ currentUser?.nombre || 'Usuario' }}</p>
   </div>
+
+  <!-- Módulos principales -->
+  <div class="dashboard-grid mb-4">
+    <div class="dash-card">
+      <div class="dash-card-top">
+        <div class="dash-card-icon">📋</div>
+        <h3 class="dash-card-title">Pedidos</h3>
+      </div>
+      <div class="dash-card-actions">
+        <a routerLink="/formulario" class="btn-dash-primary">+ Nueva simulación</a>
+        <a routerLink="/mis-pedidos" class="btn-dash-outline">Ver todos los pedidos</a>
+      </div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-top">
+        <div class="dash-card-icon">👥</div>
+        <h3 class="dash-card-title">Clientes</h3>
+      </div>
+      <div class="dash-card-actions">
+        <a routerLink="/clientes/alta" class="btn-dash-primary">+ Nuevo cliente</a>
+        <a routerLink="/clientes" class="btn-dash-outline">Ver todos los clientes</a>
+      </div>
+    </div>
+    <div class="dash-card">
+      <div class="dash-card-top">
+        <div class="dash-card-icon">🚛</div>
+        <h3 class="dash-card-title">Camiones</h3>
+      </div>
+      <div class="dash-card-actions">
+        <a *ngIf="currentUser?.rol === 'admin'" routerLink="/camiones/alta" class="btn-dash-primary">+ Nuevo camión</a>
+        <a routerLink="/camiones" class="btn-dash-outline">Ver todos los camiones</a>
+      </div>
+    </div>
+    <div class="dash-card" *ngIf="currentUser?.rol === 'admin'">
+      <div class="dash-card-top">
+        <div class="dash-card-icon">⚙️</div>
+        <h3 class="dash-card-title">Usuarios</h3>
+      </div>
+      <div class="dash-card-actions">
+        <a routerLink="/registrar-cuenta" class="btn-dash-primary">+ Nuevo usuario</a>
+        <a routerLink="/usuarios" class="btn-dash-outline">Ver todos los usuarios</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estadísticas rápidas -->
+  <div class="stats-row mb-4">
+    <div class="stat-card">
+      <div class="stat-number">{{ totalPedidos }}</div>
+      <div class="stat-label">Total pedidos</div>
+    </div>
+    <div class="stat-card stat-pending">
+      <div class="stat-number">{{ pedidosPendientes }}</div>
+      <div class="stat-label">Pendientes</div>
+    </div>
+    <div class="stat-card stat-production">
+      <div class="stat-number">{{ pedidosEnProduccion }}</div>
+      <div class="stat-label">En producción</div>
+    </div>
+    <div class="stat-card stat-done">
+      <div class="stat-number">{{ pedidosEntregados }}</div>
+      <div class="stat-label">Entregados</div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Próximas entregas -->
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-600">📅 Próximas entregas</span>
+          <a routerLink="/mis-pedidos" class="small" style="color:#159947;">Ver todos →</a>
+        </div>
+        <div class="card-body p-0">
+          @if (cargandoPedidos) {
+            <div class="p-3">
+              <div class="skeleton skeleton-row mb-2"></div>
+              <div class="skeleton skeleton-row mb-2"></div>
+              <div class="skeleton skeleton-row"></div>
+            </div>
+          } @else if (proximasEntregas.length === 0) {
+            <div class="empty-state">
+              <div class="empty-icon">📅</div>
+              <p>No hay entregas programadas</p>
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="table mb-0">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Cliente</th>
+                    <th>Camión</th>
+                    <th>Estado</th>
+                    <th>Entrega</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of proximasEntregas; track p.id) {
+                    <tr>
+                      <td class="text-muted">{{ p.id }}</td>
+                      <td class="fw-500">{{ p.cliente_razon_social }}</td>
+                      <td>{{ p.camion }}</td>
+                      <td>
+                        <span class="badge-estado" [class.pendiente]="p.estado === 'Pendiente'" [class.aprobado]="p.estado === 'Aprobado' || p.estado === 'En Producción'" [class.rechazado]="p.estado === 'Rechazado'">
+                          {{ p.estado }}
+                        </span>
+                      </td>
+                      <td class="text-muted">{{ p.fecha_entrega | date:'dd/MM/yyyy' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Alertas -->
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="fw-600">⚠️ Alertas</span>
+        </div>
+        <div class="card-body p-0">
+          @if (cargandoPedidos) {
+            <div class="p-3">
+              <div class="skeleton skeleton-text mb-2"></div>
+              <div class="skeleton skeleton-text-sm"></div>
+            </div>
+          } @else if (pedidosAtrasados.length === 0 && pedidosSinFecha.length === 0) {
+            <div class="p-3 text-center text-muted small">
+              ✅ Sin alertas — todo al día
+            </div>
+          } @else {
+            <div class="list-group list-group-flush">
+              @for (p of pedidosAtrasados; track p.id) {
+                <div class="list-group-item border-0 py-2 px-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <span style="color:#da251d;">🔴</span>
+                    <div>
+                      <small class="fw-500 d-block">{{ p.cliente_razon_social }} — #{{ p.id }}</small>
+                      <small class="text-muted">Atrasado — Entrega: {{ p.fecha_entrega | date:'dd/MM/yyyy' }}</small>
+                    </div>
+                  </div>
+                </div>
+              }
+              @for (p of pedidosSinFecha; track p.id) {
+                <div class="list-group-item border-0 py-2 px-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <span style="color:#f59e0b;">🟡</span>
+                    <div>
+                      <small class="fw-500 d-block">{{ p.cliente_razon_social }} — #{{ p.id }}</small>
+                      <small class="text-muted">Sin fecha de entrega asignada</small>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Actividad reciente -->
+      <div class="card">
+        <div class="card-header">
+          <span class="fw-600">🕐 Actividad reciente</span>
+        </div>
+        <div class="card-body p-0">
+          @if (cargandoPedidos) {
+            <div class="p-3">
+              <div class="skeleton skeleton-text mb-2"></div>
+              <div class="skeleton skeleton-text-sm"></div>
+            </div>
+          } @else {
+            <div class="list-group list-group-flush">
+              @for (p of pedidos.slice(0, 5); track p.id) {
+                <div class="list-group-item border-0 py-2 px-3 d-flex justify-content-between align-items-center">
+                  <div>
+                    <small class="fw-500 d-block">{{ p.cliente_razon_social }}</small>
+                    <small class="text-muted">{{ p.camion }}</small>
+                  </div>
+                  <span class="badge-estado" [class.pendiente]="p.estado === 'Pendiente'" [class.aprobado]="p.estado === 'Aprobado' || p.estado === 'En Producción'" [class.rechazado]="p.estado === 'Rechazado'">
+                    {{ p.estado }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>

@@ -1,38 +1,51 @@
-<div class="login-wrapper">
-  <div class="login-card">
-    <h1 class="login-title">Iniciar sesión</h1>
+<div class="login-page">
 
-    <form [formGroup]="loginForm" (ngSubmit)="login()">
-
-      <div class="form-group mb-4">
-        <label class="form-label">Email</label>
-        <input
-          formControlName="email"
-          type="email"
-          class="form-control"
-        />
-        <div *ngIf="email?.invalid && (email?.dirty || email?.touched)" class="error-text">
-          <div *ngIf="email?.hasError('required')">El email es requerido</div>
-          <div *ngIf="email?.hasError('email')">Formato inválido.</div>
-        </div>
-      </div>
-
-      <div class="form-group mb-4">
-        <label class="form-label">Contraseña</label>
-        <input
-          formControlName="password"
-          type="password"
-          class="form-control"
-        />
-        <div *ngIf="password?.invalid && (password?.dirty || password?.touched)" class="error-text">
-          <div *ngIf="password?.hasError('required')">La contraseña es requerida</div>
-        </div>
-      </div>
-
-      <button type="submit" class="btn-login">
-        Iniciar sesión
-      </button>
-
-    </form>
+  <div class="login-brand">
+    <img src="assets/images/logo.svg" alt="Lambert" class="brand-logo" />
+    <h2 class="brand-title">Software de Diseño<br>de Carrocerías</h2>
+    <p class="brand-subtitle">
+      Calculá distribución de carga, voladizos y modificaciones de chasis con precisión técnica.
+    </p>
+    <span class="brand-badge">✦ Plataforma profesional Lambert</span>
   </div>
+
+  <div class="login-form-panel">
+    <div class="login-card">
+
+      <div class="login-header">
+        <h1>Bienvenido</h1>
+        <p>Ingresá tus credenciales para continuar</p>
+      </div>
+
+      <div *ngIf="errorMessage" class="login-error-alert">
+        ⚠ {{ errorMessage }}
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="login()">
+
+        <div class="form-group mb-3">
+          <label class="form-label">Email</label>
+          <input formControlName="email" type="email" class="form-control" placeholder="usuario@empresa.com" />
+          <div *ngIf="email?.invalid && (email?.dirty || email?.touched)" class="error-text">
+            <span *ngIf="email?.hasError('required')">El email es requerido</span>
+            <span *ngIf="email?.hasError('email')">Formato de email inválido</span>
+          </div>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label">Contraseña</label>
+          <input formControlName="password" type="password" class="form-control" placeholder="••••••••" />
+          <div *ngIf="password?.invalid && (password?.dirty || password?.touched)" class="error-text">
+            <span *ngIf="password?.hasError('required')">La contraseña es requerida</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" [disabled]="loginForm.invalid">
+          Iniciar sesión
+        </button>
+
+      </form>
+    </div>
+  </div>
+
 </div>

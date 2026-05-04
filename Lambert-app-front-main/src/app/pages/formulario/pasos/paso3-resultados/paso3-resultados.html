@@ -1,95 +1,292 @@
-<div class="page-container container">
-  <div class="form-wrapper resultados">
-    <h1 class="page-title">Resultados y Verificaciones</h1>
+<div *ngIf="cargando" class="loading-state">
+  <div class="spinner-border text-success spinner-md" role="status"></div>
+  <span>Calculando resultados técnicos...</span>
+</div>
 
-    <div *ngIf="cargando" class="feedback-message feedback-info">Calculando resultados...</div>
-    <div *ngIf="error" class="feedback-message feedback-error">{{ error }}</div>
+<div *ngIf="error" class="feedback-message feedback-error">⚠ {{ error }}</div>
 
-    <div *ngIf="!cargando && resultados">
+<div *ngIf="!cargando && resultados">
 
-      <!-- 🧾 Resumen general -->
-      <section class="mb-4">
-        <h4>Resumen general</h4>
-        <p>
-          <strong>Camión:</strong>
-          {{ datosProyecto.camion.marca_camion }} {{ datosProyecto.camion.modelo_camion }} ({{ datosProyecto.camion.ano_camion }})<br>
-          <strong>Tipo:</strong> {{ datosProyecto.camion.tipo_camion }}<br>
-          <strong>Configuración:</strong>
-          Carrocería {{ datosProyecto.carroceria.tipo_carroceria }} de {{ datosProyecto.carroceria.largo_carroceria }} mm de largo
-        </p>
-      </section>
+  <div class="resultados-header">
+    <h1>Resultados y Verificaciones</h1>
+    <p>Simulación técnica completada</p>
+  </div>
 
-      <!-- ⚙️ Resultados técnicos -->
-      <section class="mb-4">
-        <h4>Resultados técnicos</h4>
-        <ul class="list-group">
-          <li class="list-group-item d-flex justify-content-between">
-            <span>PBT máximo:</span> {{ resultados.resultado_peso_bruto_total_maximo | number }} kg
-          </li>
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Carga eje delantero:</span> {{ resultados.resultado_carga_eje_delantero_calculada | number }} kg
-          </li>
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Carga eje trasero:</span> {{ resultados.resultado_carga_eje_trasero_calculada | number }} kg
-          </li>
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Centro de carga total:</span> {{ resultados.resultado_centro_carga_total | number:'1.0-0' }} mm
-          </li>
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Centro de carga carrocería:</span> {{ resultados.resultado_centro_carga_carroceria | number:'1.0-0' }} mm
-          </li>
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Nueva distancia entre ejes:</span> {{ resultados.resultado_nueva_distancia_entre_ejes | number:'1.0-0' }} mm
-          </li>
-          <li class="list-group-item d-flex justify-content-between">
-            <span>Desplazamiento del eje:</span> {{ resultados.resultado_desplazamiento_eje | number:'1.0-0' }} mm
-          </li>
-        </ul>
-      </section>
-
-      <!-- ✅ Verificaciones normativas -->
-      <section class="mb-4 verificacion-cards">
-        <div [ngClass]="resultados.verificacion_distribucion_carga_ok ? 'ok' : 'error'">
-          <h5>Distribución de carga</h5>
-          <p>{{ resultados.verificacion_distribucion_carga_ok ? 'Cumple norma' : 'Fuera de norma' }}</p>
-        </div>
-
-        <div [ngClass]="resultados.verificacion_voladizo_trasero_ok ? 'ok' : 'error'">
-          <h5>Voladizo trasero</h5>
-          <p>{{ resultados.verificacion_voladizo_trasero_ok ? 'Cumple norma' : 'Excedido' }}</p>
-        </div>
-      </section>
-
-      <!-- 💡 Recomendaciones -->
-      <section class="mb-4">
-        <h4>Recomendaciones</h4>
-        <ul class="list-group">
-          <li *ngFor="let rec of resultados.recomendaciones" class="list-group-item">
-            {{ rec }}
-          </li>
-        </ul>
-      </section>
-
-      <!-- 📊 Modificaciones requeridas-->
-      <section class="mb-4">
-        <button class="btn btn-secondary mb-3" (click)="alternarDetalles()">
-          {{ mostrarDetalles ? 'Ocultar modificaciones' : 'Ver modificaciones' }}
-        </button>
-
-        <div *ngIf="mostrarDetalles" class="border rounded p-3">
-          <p><strong>Desplazamiento del eje:</strong> {{ resultados.resultado_desplazamiento_eje | number:'1.0-0' }} mm</p>
-          <p><strong>Modificación de chasis:</strong> {{ resultados.resultado_modificacion_chasis }}</p>
-          <p><strong>Nuevo voladizo trasero:</strong> {{ resultados.resultado_voladizo_trasero_calculado | number:'1.0-0' }} mm</p>
-          <p><strong>Largo final:</strong> {{ resultados.resultado_largo_final_camion | number:'1.0-0' }} mm</p>
-        </div>
-      </section>
-
-      <!-- 🔘 Acciones -->
-      <div class="form-actions">
-        <button class="btn btn-secondary" (click)="volverAModificar()">Modificar datos</button>
-        <button class="btn btn-primary" (click)="guardarProyecto()">Guardar simulación</button>
-      </div>
-
+  <div class="resumen-card">
+    <div class="resumen-label">Configuración simulada</div>
+    <div class="resumen-value">
+      {{ datosProyecto.camion.marca_camion }} {{ datosProyecto.camion.modelo_camion }}
+      ({{ datosProyecto.camion.ano_camion }}) —
+      {{ datosProyecto.camion.tipo_camion }} —
+      Carrocería {{ datosProyecto.carroceria.tipo_carroceria }} {{ datosProyecto.carroceria.largo_carroceria | number:'1.0-0' }} mm
     </div>
   </div>
+
+  <!-- Diagrama de distribución de cargas -->
+  @if (diagrama) {
+  <div class="diagrama-card">
+    <h5>Distribución de cargas</h5>
+    <div class="diagrama-container">
+      <svg [attr.viewBox]="getViewBox()" class="diagrama-svg" preserveAspectRatio="xMidYMid meet">
+        <!-- Línea del chasis -->
+        <line [attr.x1]="getX(diagrama.posicionCabinaInicio)" y1="100"
+              [attr.x2]="getX(diagrama.posicionCarroceriaFin)" y2="100"
+              stroke="#262626" stroke-width="4"/>
+
+        <!-- Cabina -->
+        <rect [attr.x]="getX(diagrama.posicionCabinaInicio)" y="60"
+              [attr.width]="getWidth(diagrama.posicionCabinaInicio, diagrama.posicionCabinaFin)"
+              height="40" fill="#333333" rx="3"/>
+        <text [attr.x]="getCenterX(diagrama.posicionCabinaInicio, diagrama.posicionCabinaFin)" y="85"
+              text-anchor="middle" fill="white" font-size="10">Cabina</text>
+
+        <!-- Carrocería -->
+        <rect [attr.x]="getX(diagrama.posicionCarroceriaInicio)" y="50"
+              [attr.width]="getWidth(diagrama.posicionCarroceriaInicio, diagrama.posicionCarroceriaFin)"
+              height="50" fill="#159947" rx="3"/>
+        <text [attr.x]="getCenterX(diagrama.posicionCarroceriaInicio, diagrama.posicionCarroceriaFin)" y="80"
+              text-anchor="middle" fill="white" font-size="10">Carrocería</text>
+
+        <!-- Eje delantero -->
+        <line [attr.x1]="getX(0)" y1="100" [attr.x2]="getX(0)" y2="140"
+              stroke="#262626" stroke-width="3"/>
+        <line [attr.x1]="getX(0) - 15" y1="140" [attr.x2]="getX(0) + 15" y2="140"
+              stroke="#262626" stroke-width="3"/>
+        <text [attr.x]="getX(0)" y="155" text-anchor="middle" font-size="9" fill="#262626">Eje Del.</text>
+
+        <!-- Eje trasero (o ejes para 6x2) -->
+        <line [attr.x1]="getX(diagrama.posicionEjeTrasero)" y1="100" [attr.x2]="getX(diagrama.posicionEjeTrasero)" y2="140"
+              stroke="#262626" stroke-width="3"/>
+        <line [attr.x1]="getX(diagrama.posicionEjeTrasero) - 15" y1="140" [attr.x2]="getX(diagrama.posicionEjeTrasero) + 15" y2="140"
+              stroke="#262626" stroke-width="3"/>
+        <text [attr.x]="getX(diagrama.posicionEjeTrasero)" y="155" text-anchor="middle" font-size="9" fill="#262626">Eje Tras.</text>
+
+        <!-- Centro de carga carrocería -->
+        <line [attr.x1]="getX(diagrama.posicionCentroCargaCarroceria)" y1="50"
+              [attr.x2]="getX(diagrama.posicionCentroCargaCarroceria)" y2="100"
+              stroke="#da251d" stroke-width="2" stroke-dasharray="4,3"/>
+        <text [attr.x]="getX(diagrama.posicionCentroCargaCarroceria)" y="45"
+              text-anchor="middle" font-size="8" fill="#da251d">CC</text>
+
+        <!-- Centro de carga total -->
+        <line [attr.x1]="getX(diagrama.posicionCentroCargaTotal)" y1="100"
+              [attr.x2]="getX(diagrama.posicionCentroCargaTotal)" y2="130"
+              stroke="#159947" stroke-width="2" stroke-dasharray="4,3"/>
+        <text [attr.x]="getX(diagrama.posicionCentroCargaTotal)" y="125"
+              text-anchor="middle" font-size="8" fill="#159947">CT</text>
+
+        <!-- Cargas extra -->
+        <g *ngFor="let carga of diagrama.cargasExtra">
+          <rect [attr.x]="getX(carga.posicion) - 10" y="55"
+                width="20" height="15" fill="#da251d" rx="2"/>
+          <text [attr.x]="getX(carga.posicion)" y="66"
+                text-anchor="middle" fill="white" font-size="7">{{ carga.peso | number:'1.0-0' }}</text>
+        </g>
+
+        <!-- Flechas de carga en ejes (peso real del chasis) -->
+        <!-- Flecha eje delantero -->
+        <polygon [attr.points]="getArrowPoints(getX(0), 160)" fill="#262626"/>
+        <text [attr.x]="getX(0)" y="175" text-anchor="middle" font-size="8" fill="#262626">
+          {{ diagrama.pesoEjeDelantero | number:'1.0-0' }} kg
+        </text>
+
+        <!-- Flecha eje trasero -->
+        <polygon [attr.points]="getArrowPoints(getX(diagrama.posicionEjeTrasero), 160)" fill="#262626"/>
+        <text [attr.x]="getX(diagrama.posicionEjeTrasero)" y="175" text-anchor="middle" font-size="8" fill="#262626">
+          {{ diagrama.pesoEjeTrasero | number:'1.0-0' }} kg
+        </text>
+
+        <!-- Cotas de dimensiones -->
+        <!-- Voladizo delantero -->
+        <line [attr.x1]="getX(diagrama.posicionCabinaInicio)" y1="190"
+              [attr.x2]="getX(0)" y2="190" stroke="#666" stroke-width="1"/>
+        <text [attr.x]="getCenterX(diagrama.posicionCabinaInicio, 0)" y="185"
+              text-anchor="middle" font-size="8" fill="#666">
+          {{ diagrama.voladizoDelantero | number:'1.0-0' }}
+        </text>
+
+        <!-- Distancia entre ejes -->
+        <line [attr.x1]="getX(0)" y1="190"
+              [attr.x2]="getX(diagrama.posicionEjeTrasero)" y2="190" stroke="#666" stroke-width="1"/>
+        <text [attr.x]="getCenterX(0, diagrama.posicionEjeTrasero)" y="185"
+              text-anchor="middle" font-size="8" fill="#666">
+          {{ diagrama.posicionEjeTrasero | number:'1.0-0' }}
+        </text>
+
+        <!-- Voladizo trasero -->
+        <line [attr.x1]="getX(diagrama.posicionEjeTrasero)" y1="190"
+              [attr.x2]="getX(diagrama.posicionCarroceriaFin)" y2="190" stroke="#666" stroke-width="1"/>
+        <text [attr.x]="getCenterX(diagrama.posicionEjeTrasero, diagrama.posicionCarroceriaFin)" y="185"
+              text-anchor="middle" font-size="8" fill="#666">
+          {{ diagrama.voladizoTrasero | number:'1.0-0' }}
+        </text>
+      </svg>
+    </div>
+
+    <!-- Barras de uso por eje -->
+    <div class="barras-uso">
+      <div class="barra-eje">
+        <div class="barra-label">Eje delantero: {{ diagrama.pesoEjeDelantero | number:'1.0-0' }} kg / {{ diagrama.cargaMaxEjeDelantero | number:'1.0-0' }} kg</div>
+        <div class="progress barra-progreso">
+          <div class="progress-bar"
+               [class.bg-success]="diagrama.porcentajeUsoEjeDelantero < 80"
+               [class.bg-warning]="diagrama.porcentajeUsoEjeDelantero >= 80 && diagrama.porcentajeUsoEjeDelantero < 95"
+               [class.bg-danger]="diagrama.porcentajeUsoEjeDelantero >= 95"
+               [style.width.%]="Math.min(diagrama.porcentajeUsoEjeDelantero, 100)">
+            {{ diagrama.porcentajeUsoEjeDelantero | number:'1.1-1' }}%
+          </div>
+        </div>
+      </div>
+      <div class="barra-eje">
+        <div class="barra-label">Eje trasero: {{ diagrama.pesoEjeTrasero | number:'1.0-0' }} kg / {{ diagrama.cargaMaxEjeTrasero | number:'1.0-0' }} kg</div>
+        <div class="progress barra-progreso">
+          <div class="progress-bar"
+               [class.bg-success]="diagrama.porcentajeUsoEjeTrasero < 80"
+               [class.bg-warning]="diagrama.porcentajeUsoEjeTrasero >= 80 && diagrama.porcentajeUsoEjeTrasero < 95"
+               [class.bg-danger]="diagrama.porcentajeUsoEjeTrasero >= 95"
+               [style.width.%]="Math.min(diagrama.porcentajeUsoEjeTrasero, 100)">
+            {{ diagrama.porcentajeUsoEjeTrasero | number:'1.1-1' }}%
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <div class="resultados-grid">
+    <div class="resultado-item">
+      <div class="resultado-label">PBT máximo</div>
+      <div class="resultado-valor">{{ resultados.resultado_peso_bruto_total_maximo | number:'1.0-0' }}<span class="resultado-unidad">kg</span></div>
+    </div>
+    <div class="resultado-item">
+      <div class="resultado-label">Carga eje delantero</div>
+      <div class="resultado-valor">{{ resultados.resultado_carga_eje_delantero_calculada | number:'1.0-0' }}<span class="resultado-unidad">kg</span></div>
+    </div>
+    <div class="resultado-item">
+      <div class="resultado-label">Carga eje trasero</div>
+      <div class="resultado-valor">{{ resultados.resultado_carga_eje_trasero_calculada | number:'1.0-0' }}<span class="resultado-unidad">kg</span></div>
+    </div>
+    <div class="resultado-item">
+      <div class="resultado-label">Centro de carga total</div>
+      <div class="resultado-valor">{{ resultados.resultado_centro_carga_total | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+    </div>
+    <div class="resultado-item">
+      <div class="resultado-label">Centro de carga carrocería</div>
+      <div class="resultado-valor">{{ resultados.resultado_centro_carga_carroceria | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+    </div>
+    <div class="resultado-item">
+      <div class="resultado-label">Nueva distancia entre ejes</div>
+      <div class="resultado-valor">{{ resultados.resultado_nueva_distancia_entre_ejes | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+    </div>
+    <div class="resultado-item">
+      <div class="resultado-label">Desplazamiento del eje</div>
+      <div class="resultado-valor">{{ resultados.resultado_desplazamiento_eje | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+    </div>
+  </div>
+
+  <div class="verificacion-grid">
+    <div class="verificacion-card" [class.ok]="resultados.verificacion_distribucion_carga_ok" [class.error]="!resultados.verificacion_distribucion_carga_ok">
+      <div class="verif-icon">{{ resultados.verificacion_distribucion_carga_ok ? '✅' : '❌' }}</div>
+      <div>
+        <div class="verif-title">Distribución de carga</div>
+        <div class="verif-status">{{ resultados.verificacion_distribucion_carga_ok ? 'Cumple norma' : 'Fuera de norma' }}</div>
+      </div>
+    </div>
+    <div class="verificacion-card" [class.ok]="resultados.verificacion_voladizo_trasero_ok" [class.error]="!resultados.verificacion_voladizo_trasero_ok">
+      <div class="verif-icon">{{ resultados.verificacion_voladizo_trasero_ok ? '✅' : '❌' }}</div>
+      <div>
+        <div class="verif-title">Voladizo trasero</div>
+        <div class="verif-status">{{ resultados.verificacion_voladizo_trasero_ok ? 'Cumple norma' : 'Excedido' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Observaciones -->
+  <div class="recomendaciones-card" *ngIf="resultados.observaciones && resultados.observaciones.length > 0">
+    <h5>Observaciones</h5>
+    <div *ngFor="let obs of resultados.observaciones" class="obs-item">
+      <span class="obs-icon">⚠</span>
+      <span>{{ obs }}</span>
+    </div>
+  </div>
+
+  <!-- Soluciones -->
+  <div class="recomendaciones-card" *ngIf="resultados.recomendaciones && resultados.recomendaciones.length > 0">
+    <h5>Posibles soluciones</h5>
+    <div *ngFor="let rec of resultados.recomendaciones" class="rec-item">
+      <span [class]="getBadgeClass(rec.prioridad)" class="rec-badge">P{{ rec.prioridad }}</span>
+      <span class="rec-text">{{ rec.texto }}</span>
+      <span class="rec-info-icon" (click)="abrirModal(rec)" title="Ver más información">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+          <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" [class.show]="modalAbierto" [style.display]="modalAbierto ? 'block' : 'none'" tabindex="-1" *ngIf="recomendacionSeleccionada">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ getDescripcion(recomendacionSeleccionada.tipo).titulo }}</h5>
+          <button type="button" class="btn-close" (click)="cerrarModal()" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-5 text-center">
+              <img [src]="getDescripcion(recomendacionSeleccionada.tipo).imagen"
+                   class="img-fluid rounded modal-solucion-img"
+                   [alt]="getDescripcion(recomendacionSeleccionada.tipo).titulo"
+                   onerror="this.src='assets/img/soluciones/placeholder.svg'">
+            </div>
+            <div class="col-md-7">
+              <p class="modal-solucion-desc">{{ getDescripcion(recomendacionSeleccionada.tipo).descripcion }}</p>
+              <hr>
+              <div class="modal-solucion-texto">
+                <strong>Solución sugerida:</strong>
+                <p>{{ recomendacionSeleccionada.texto }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show" *ngIf="modalAbierto"></div>
+
+  <div class="mb-3">
+    <button class="btn btn-secondary btn-sm" (click)="alternarDetalles()">
+      {{ mostrarDetalles ? '▲ Ocultar detalles' : '▼ Ver detalles técnicos' }}
+    </button>
+  </div>
+
+  <div *ngIf="mostrarDetalles" class="detalles-panel">
+    <div class="detalle-row">
+      <span>Modificación de chasis</span>
+      <span>{{ resultados.resultado_modificacion_chasis }}</span>
+    </div>
+    <div class="detalle-row">
+      <span>Voladizo trasero calculado</span>
+      <span>{{ resultados.resultado_voladizo_trasero_calculado | number:'1.0-0' }} mm</span>
+    </div>
+    <div class="detalle-row">
+      <span>Largo final del camión</span>
+      <span>{{ resultados.resultado_largo_final_camion | number:'1.0-0' }} mm</span>
+    </div>
+    <div class="detalle-row">
+      <span>Distribución eje delantero</span>
+      <span>{{ resultados.resultado_porcentaje_carga_eje_delantero | number:'1.1-1' }}%</span>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-secondary" (click)="volverAModificar()">← Modificar datos</button>
+    <button class="btn btn-primary" (click)="guardarProyecto()">Guardar simulación →</button>
+  </div>
+
 </div>

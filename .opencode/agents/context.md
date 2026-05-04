@@ -1,7 +1,7 @@
 ---
 description: Gestor de Conocimiento. Ingestion de documentacion, busqueda de patrones en codigo existente y auditoria de contexto.
 mode: subagent
-model: google/gemini-1.5-flash
+model: opencode/gemini-3-flash
 temperature: 0.1
 color: "#f59e0b"
 permission:
@@ -20,8 +20,10 @@ permission:
 ## Posicion en el Workflow
 
 ```
-@Context -> @Architect -> @Developer -> @Guardian
-   ^^
+@Context -> @Architect -> @Designer -> @Guardian -> @Analyst
+   ^^          (FE)
+@Context -> @Architect -> @Developer -> @Guardian -> @Analyst
+   ^^          (BE)
 PRIMER PASO: Antes de disenar o implementar, vos garantizas que el equipo trabaje con datos reales.
 ```
 

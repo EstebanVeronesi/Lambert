@@ -1,91 +1,435 @@
-<div class="page-container container" *ngIf="pedido">
-  <div class="form-wrapper resultados">
-    <h1 class="page-title">Detalle del Pedido #{{ pedido.id }}</h1>
+<div class="page-container container">
+  <app-breadcrumb [items]="[{label: 'Inicio', link: '/dashboard'}, {label: 'Mis pedidos', link: '/mis-pedidos'}, {label: pedido ? 'Pedido #' + pedido.id : 'Detalle'}]"></app-breadcrumb>
 
-    <!-- Cliente -->
-    <section>
-      <h4>Cliente</h4>
-      <p>
-        <strong>CUIT:</strong> {{ pedido.cuit }}<br>
-        <strong>Razón social:</strong> {{ pedido.cliente_razon_social }}
-      </p>
-    </section>
+  <!-- Estado de carga -->
+  @if (cargando) {
+    <div class="skeleton-wrapper">
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-card mt-3"></div>
+      <div class="skeleton skeleton-card mt-3"></div>
+    </div>
+  }
 
-    <!-- Camión -->
-    <section>
-      <h4>Camión</h4>
-      <p>
-        <strong>Marca:</strong> {{ pedido.camion.marca_camion }}<br>
-        <strong>Modelo:</strong> {{ pedido.camion.modelo_camion }}<br>
-        <strong>Año:</strong> {{ pedido.camion.ano_camion }}<br>
-        <strong>Tipo:</strong> {{ pedido.camion.tipo_camion }}
-      </p>
-    </section>
+  <!-- Contenido -->
+  @if (pedido && !cargando) {
+    <div class="resultados">
 
-    <!-- Configuración -->
-    <section>
-      <h4>Configuración</h4>
-      <div class="tabla">
-        <div><span>Distancia entre ejes:</span> {{ pedido.configuracion.distancia_entre_ejes }} mm</div>
-        <div><span>Distancia primer eje a espalda cabina:</span> {{ pedido.configuracion.distancia_primer_eje_espalda_cabina }} mm</div>
-        <div><span>Voladizo delantero:</span> {{ pedido.configuracion.voladizo_delantero }} mm</div>
-        <div><span>Voladizo trasero:</span> {{ pedido.configuracion.voladizo_trasero }} mm</div>
-        <div><span>Peso eje delantero:</span> {{ pedido.configuracion.peso_eje_delantero }} kg</div>
-        <div><span>Peso eje trasero:</span> {{ pedido.configuracion.peso_eje_trasero }} kg</div>
-        <div><span>Ancho chasis 1:</span> {{ pedido.configuracion.ancho_chasis_1 }} mm</div>
-        <div><span>Ancho chasis 2:</span> {{ pedido.configuracion.ancho_chasis_2 }} mm</div>
-        <div><span>PBT:</span> {{ pedido.configuracion.pbt }} kg</div>
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- HEADER PRINCIPAL                             -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div class="pedido-header card mb-4">
+        <div class="card-body py-3">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+              <div class="d-flex align-items-center gap-3 mb-2">
+                <h1 class="page-title mb-0">Pedido #{{ pedido.id }}</h1>
+                <span class="badge-estado" [class]="'badge-' + getEstadoClass(pedido.estado)">
+                  {{ pedido.estado }}
+                </span>
+              </div>
+              <p class="text-muted mb-0">
+                {{ pedido.cliente_razon_social }}
+                <span class="separator">·</span>
+                {{ pedido.fecha_entrega ? (pedido.fecha_entrega | date:'dd/MM/yyyy') : 'Sin fecha de entrega' }}
+              </p>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-success" (click)="resimular()">
+                🔄 Volver a simular
+              </button>
+              <button class="btn btn-outline-primary" (click)="imprimirSimulacion()">
+                📄 Exportar PDF
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
 
-    <!-- Carrocería -->
-    <section>
-      <h4>Carrocería</h4>
-      <div class="tabla">
-        <div><span>Tipo:</span> {{ pedido.carroceria.tipo_carroceria }}</div>
-        <div><span>Largo:</span> {{ pedido.carroceria.largo_carroceria }} mm</div>
-        <div><span>Alto:</span> {{ pedido.carroceria.alto_carroceria }} mm</div>
-        <div><span>Ancho:</span> {{ pedido.carroceria.ancho_carroceria }} mm</div>
-        <div><span>Separación cabina-carrocería:</span> {{ pedido.carroceria.separacion_cabina_carroceria }} mm</div>
-        <div><span>Equipo de frío:</span> {{ pedido.carroceria.equipo_frio_marca_modelo }}</div>
-      </div>
-    </section>
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- PANEL DE ADMIN (solo visible para admin)    -->
+      <!-- ═══════════════════════════════════════════ -->
+      @if (currentUser?.rol === 'admin') {
+        <div class="admin-panel card mb-4 shadow-sm border-start border-4 border-success py-2">
+          <div class="card-body py-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+              <div class="d-flex align-items-center gap-2">
+                <span class="admin-icon">⚙️</span>
+                <span class="fw-semibold text-dark">Administración</span>
+              </div>
+              <div class="d-flex align-items-center gap-3 flex-wrap flex-grow-1">
+                <div class="d-flex align-items-center gap-2">
+                  <label class="text-muted small mb-0">Estado</label>
+                  <select class="form-select form-select-sm admin-select"
+                          [(ngModel)]="estadoEditable"
+                          (change)="actualizarEstado()">
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En Producción">En Producción</option>
+                    <option value="Entregado">Entregado</option>
+                    <option value="Rechazado">Rechazado</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="text-muted small mb-0">Fecha entrega</label>
+                  <input type="date"
+                         class="form-control form-control-sm admin-date"
+                         [(ngModel)]="fechaEntregaEditable"
+                         (change)="actualizarFechaEntrega()">
+                </div>
+                <button class="btn btn-outline-danger btn-sm ms-2" (click)="confirmarEliminar()">
+                  🗑️ Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
 
-    <!-- Resultados técnicos -->
-    <section>
-      <h4>Resultados técnicos</h4>
-      <div class="tabla">
-        <div><span>PBT máximo:</span> {{ pedido.resultado_peso_bruto_total_maximo }} kg</div>
-        <div><span>Carga eje delantero:</span> {{ pedido.resultado_carga_eje_delantero_calculada }} kg</div>
-        <div><span>Carga eje trasero:</span> {{ pedido.resultado_carga_eje_trasero_calculada }} kg</div>
-        <div><span>Centro de carga total:</span> {{ pedido.resultado_centro_carga_total }} mm</div>
-        <div><span>Centro de carga carrocería:</span> {{ pedido.resultado_centro_carga_carroceria }} mm</div>
-        <div><span>Nueva distancia entre ejes:</span> {{ pedido.resultado_nueva_distancia_entre_ejes }} mm</div>
-        <div><span>Desplazamiento del eje:</span> {{ pedido.resultado_desplazamiento_eje }} mm</div>
-        <div><span>Modificación de chasis:</span> {{ pedido.resultado_modificacion_chasis }}</div>
-        <div><span>Voladizo trasero calculado:</span> {{ pedido.resultado_voladizo_trasero_calculado }} mm</div>
-        <div><span>Largo final:</span> {{ pedido.resultado_largo_final_camion }} mm</div>
-      </div>
-    </section>
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- BARRA DE PROGRESO DEL PEDIDO                -->
+      <!-- ═══════════════════════════════════════════ -->
+      <div class="progreso-pedido card mb-4">
+        <div class="card-body py-4 px-4">
+          <h5 class="progreso-titulo mb-3">📊 Seguimiento del pedido</h5>
+          <div class="progreso-track">
+            @for (etapa of etapas; track etapa.clave; let i = $index) {
+              <div class="progreso-paso"
+                   [class.actual]="etapa.clave === etapaActual"
+                   [class.completado]="etapa.completado"
+                   [class.futuro]="!etapa.completado && etapa.clave !== etapaActual">
 
-    <!-- Verificaciones -->
-    <section class="verificacion-cards">
-      <div [ngClass]="pedido.verificacion_distribucion_carga_ok ? 'ok' : 'error'">
-        <h5>Distribución de carga</h5>
-        <p>{{ pedido.verificacion_distribucion_carga_ok ? 'Cumple norma' : 'Fuera de norma' }}</p>
-      </div>
-      <div [ngClass]="pedido.verificacion_voladizo_trasero_ok ? 'ok' : 'error'">
-        <h5>Voladizo trasero</h5>
-        <p>{{ pedido.verificacion_voladizo_trasero_ok ? 'Cumple norma' : 'Excedido' }}</p>
-      </div>
-    </section>
+                <!-- Círculo con icono -->
+                <div class="progreso-circulo">
+                  @if (etapa.completado) {
+                    <span class="progreso-check">✓</span>
+                  } @else if (etapa.clave === etapaActual) {
+                    <span class="progreso-dot"></span>
+                  } @else {
+                    <span class="progreso-empty">{{ i + 1 }}</span>
+                  }
+                </div>
 
-    <!-- Recomendaciones -->
-    <section *ngIf="pedido.recomendaciones && pedido.recomendaciones.length">
-      <h4>Recomendaciones</h4>
-      <ul class="lista-recomendaciones">
-        <li *ngFor="let rec of pedido.recomendaciones">{{ rec }}</li>
-      </ul>
-    </section>
-  </div>
+                <!-- Etiqueta -->
+                <div class="progreso-info">
+                  <span class="progreso-etapa">{{ etapa.label }}</span>
+                  @if (etapa.completado && etapa.fecha) {
+                    <span class="progreso-fecha">{{ etapa.fecha }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════ -->
+      <!-- SECCIONES COLAPSABLES                      -->
+      <!-- ═══════════════════════════════════════════ -->
+
+      <!-- 1. Cliente -->
+      <div class="section-card mb-3">
+        <button class="section-toggle w-100" (click)="toggleSeccion('cliente')">
+          <div class="d-flex align-items-center gap-2">
+            <span class="section-icon">👤</span>
+            <span class="fw-semibold">1. Cliente</span>
+          </div>
+          <span class="toggle-icon" [class.rotated]="seccionesAbiertas['cliente']">▼</span>
+        </button>
+        <div class="section-content" [class.open]="seccionesAbiertas['cliente']">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">CUIT</span>
+              <span class="info-value">{{ pedido.cuit }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Razón Social</span>
+              <span class="info-value">{{ pedido.cliente_razon_social }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Camión -->
+      <div class="section-card mb-3">
+        <button class="section-toggle w-100" (click)="toggleSeccion('camion')">
+          <div class="d-flex align-items-center gap-2">
+            <span class="section-icon">🚛</span>
+            <span class="fw-semibold">2. Camión</span>
+          </div>
+          <span class="toggle-icon" [class.rotated]="seccionesAbiertas['camion']">▼</span>
+        </button>
+        <div class="section-content" [class.open]="seccionesAbiertas['camion']">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Marca</span>
+              <span class="info-value">{{ pedido.camion.marca_camion }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Modelo</span>
+              <span class="info-value">{{ pedido.camion.modelo_camion }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Año</span>
+              <span class="info-value">{{ pedido.camion.ano_camion || '—' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tipo</span>
+              <span class="info-value">
+                <span class="badge-tipo">{{ pedido.camion.tipo_camion }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Configuración Técnica -->
+      <div class="section-card mb-3">
+        <button class="section-toggle w-100" (click)="toggleSeccion('configuracion')">
+          <div class="d-flex align-items-center gap-2">
+            <span class="section-icon">⚙️</span>
+            <span class="fw-semibold">3. Configuración Técnica</span>
+          </div>
+          <span class="toggle-icon" [class.rotated]="seccionesAbiertas['configuracion']">▼</span>
+        </button>
+        <div class="section-content" [class.open]="seccionesAbiertas['configuracion']">
+          <div class="config-grid">
+            <div class="config-item">
+              <span class="config-label">Distancia entre ejes</span>
+              <span class="config-value">{{ pedido.configuracion.distancia_entre_ejes | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Dist. primer eje espalda cabina</span>
+              <span class="config-value">{{ pedido.configuracion.distancia_primer_eje_espalda_cabina | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Voladizo delantero</span>
+              <span class="config-value">{{ pedido.configuracion.voladizo_delantero | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Voladizo trasero</span>
+              <span class="config-value">{{ pedido.configuracion.voladizo_trasero | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Peso eje delantero</span>
+              <span class="config-value">{{ pedido.configuracion.peso_eje_delantero | number:'1.0-0' }} kg</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Peso eje trasero</span>
+              <span class="config-value">{{ pedido.configuracion.peso_eje_trasero | number:'1.0-0' }} kg</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Ancho chasis 1</span>
+              <span class="config-value">{{ pedido.configuracion.ancho_chasis_1 | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Ancho chasis 2</span>
+              <span class="config-value">{{ pedido.configuracion.ancho_chasis_2 | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">PBT</span>
+              <span class="config-value">{{ pedido.configuracion.pbt | number:'1.0-0' }} kg</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Carrocería -->
+      <div class="section-card mb-3">
+        <button class="section-toggle w-100" (click)="toggleSeccion('carroceria')">
+          <div class="d-flex align-items-center gap-2">
+            <span class="section-icon">📦</span>
+            <span class="fw-semibold">4. Carrocería</span>
+          </div>
+          <span class="toggle-icon" [class.rotated]="seccionesAbiertas['carroceria']">▼</span>
+        </button>
+        <div class="section-content" [class.open]="seccionesAbiertas['carroceria']">
+          <div class="config-grid">
+            <div class="config-item">
+              <span class="config-label">Tipo</span>
+              <span class="config-value">{{ pedido.carroceria.tipo_carroceria }}</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Largo</span>
+              <span class="config-value">{{ pedido.carroceria.largo_carroceria | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Alto</span>
+              <span class="config-value">{{ pedido.carroceria.alto_carroceria | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Ancho</span>
+              <span class="config-value">{{ pedido.carroceria.ancho_carroceria | number:'1.0-0' }} mm</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Separación cabina-carrocería</span>
+              <span class="config-value">{{ pedido.carroceria.separacion_cabina_carroceria | number:'1.0-0' }} mm</span>
+            </div>
+            @if (pedido.carroceria.equipo_frio_marca_modelo) {
+              <div class="config-item">
+                <span class="config-label">Equipo de frío</span>
+                <span class="config-value">{{ pedido.carroceria.equipo_frio_marca_modelo }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Resultados Técnicos -->
+      <div class="section-card mb-3">
+        <button class="section-toggle w-100" (click)="toggleSeccion('resultados')">
+          <div class="d-flex align-items-center gap-2">
+            <span class="section-icon">📊</span>
+            <span class="fw-semibold">5. Resultados Técnicos</span>
+          </div>
+          <span class="toggle-icon" [class.rotated]="seccionesAbiertas['resultados']">▼</span>
+        </button>
+        <div class="section-content" [class.open]="seccionesAbiertas['resultados']">
+          <div class="resultados-grid">
+            <div class="resultado-item">
+              <div class="resultado-label">PBT máximo</div>
+              <div class="resultado-valor">{{ pedido.resultado_peso_bruto_total_maximo | number:'1.0-0' }}<span class="resultado-unidad">kg</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Carga eje delantero</div>
+              <div class="resultado-valor">{{ pedido.resultado_carga_eje_delantero_calculada | number:'1.0-0' }}<span class="resultado-unidad">kg</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Carga eje trasero</div>
+              <div class="resultado-valor">{{ pedido.resultado_carga_eje_trasero_calculada | number:'1.0-0' }}<span class="resultado-unidad">kg</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Centro de carga total</div>
+              <div class="resultado-valor">{{ pedido.resultado_centro_carga_total | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Centro de carga carrocería</div>
+              <div class="resultado-valor">{{ pedido.resultado_centro_carga_carroceria | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Nueva distancia entre ejes</div>
+              <div class="resultado-valor">{{ pedido.resultado_nueva_distancia_entre_ejes | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Desplazamiento del eje</div>
+              <div class="resultado-valor">{{ pedido.resultado_desplazamiento_eje | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Modificación de chasis</div>
+              <div class="resultado-valor">{{ pedido.resultado_modificacion_chasis }}</div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Voladizo trasero calculado</div>
+              <div class="resultado-valor">{{ pedido.resultado_voladizo_trasero_calculado | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+            </div>
+            <div class="resultado-item">
+              <div class="resultado-label">Largo final</div>
+              <div class="resultado-valor">{{ pedido.resultado_largo_final_camion | number:'1.0-0' }}<span class="resultado-unidad">mm</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Verificaciones -->
+      <div class="section-card mb-3">
+        <button class="section-toggle w-100" (click)="toggleSeccion('verificaciones')">
+          <div class="d-flex align-items-center gap-2">
+            <span class="section-icon">✅</span>
+            <span class="fw-semibold">6. Verificaciones</span>
+          </div>
+          <span class="toggle-icon" [class.rotated]="seccionesAbiertas['verificaciones']">▼</span>
+        </button>
+        <div class="section-content" [class.open]="seccionesAbiertas['verificaciones']">
+          <div class="verificacion-grid">
+            <div class="verificacion-card" [class.ok]="pedido.verificacion_distribucion_carga_ok" [class.error]="!pedido.verificacion_distribucion_carga_ok">
+              <div class="verif-icon">{{ pedido.verificacion_distribucion_carga_ok ? '✓' : '✗' }}</div>
+              <div>
+                <div class="verif-title">Distribución de carga</div>
+                <div class="verif-status">{{ pedido.verificacion_distribucion_carga_ok ? 'Cumple norma' : 'Fuera de norma' }}</div>
+              </div>
+            </div>
+            <div class="verificacion-card" [class.ok]="pedido.verificacion_voladizo_trasero_ok" [class.error]="!pedido.verificacion_voladizo_trasero_ok">
+              <div class="verif-icon">{{ pedido.verificacion_voladizo_trasero_ok ? '✓' : '✗' }}</div>
+              <div>
+                <div class="verif-title">Voladizo trasero</div>
+                <div class="verif-status">{{ pedido.verificacion_voladizo_trasero_ok ? 'Cumple norma' : 'Excedido' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Recomendaciones -->
+      @if (recomendacionesLista.length) {
+        <div class="section-card mb-4">
+          <button class="section-toggle w-100" (click)="toggleSeccion('recomendaciones')">
+            <div class="d-flex align-items-center gap-2">
+              <span class="section-icon">💡</span>
+              <span class="fw-semibold">7. Recomendaciones</span>
+            </div>
+            <span class="toggle-icon" [class.rotated]="seccionesAbiertas['recomendaciones']">▼</span>
+          </button>
+          <div class="section-content" [class.open]="seccionesAbiertas['recomendaciones']">
+            <div class="recomendaciones-lista">
+              @for (rec of recomendacionesLista; track $index) {
+                <div class="rec-item">
+                  @if (rec.prioridad) {
+                    <span [class]="getBadgeClass(rec.prioridad)" class="rec-badge">P{{ rec.prioridad }}</span>
+                  }
+                  <span class="rec-text">{{ rec.texto }}</span>
+                  @if (rec.tipo) {
+                    <span class="rec-info-icon" (click)="abrirModal(rec)" title="Ver más información">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                      </svg>
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Modal de recomendacion -->
+            <div class="modal fade" [class.show]="modalAbierto" [style.display]="modalAbierto ? 'block' : 'none'" tabindex="-1" *ngIf="recomendacionSeleccionada">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">{{ getDescripcion(recomendacionSeleccionada.tipo).titulo }}</h5>
+                    <button type="button" class="btn-close" (click)="cerrarModal()" aria-label="Cerrar"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="row">
+                      <div class="col-md-5 text-center">
+                        <img [src]="getDescripcion(recomendacionSeleccionada.tipo).imagen"
+                             class="img-fluid rounded modal-solucion-img"
+                             [alt]="getDescripcion(recomendacionSeleccionada.tipo).titulo"
+                             onerror="this.src='assets/img/soluciones/placeholder.svg'">
+                      </div>
+                      <div class="col-md-7">
+                        <p class="modal-solucion-desc">{{ getDescripcion(recomendacionSeleccionada.tipo).descripcion }}</p>
+                        <hr>
+                        <div class="modal-solucion-texto">
+                          <strong>Solución sugerida:</strong>
+                          <p>{{ recomendacionSeleccionada.texto }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" (click)="cerrarModal()">Cerrar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-backdrop fade show" *ngIf="modalAbierto"></div>
+          </div>
+        </div>
+      }
+
+      <!-- Botón volver -->
+      <div class="form-actions mt-4">
+        <a routerLink="/mis-pedidos" class="btn btn-secondary">← Volver a mis pedidos</a>
+      </div>
+
+    </div>
+  }
 </div>

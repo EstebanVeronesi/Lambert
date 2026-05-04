@@ -1,7 +1,260 @@
-/* Badge de estado */
-.estado-badge {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  background-color: #e9ecef;
+.link-verde {
+  color: #159947;
+  font-weight: 500;
+  text-decoration: none;
+  &:hover { color: #0f7a38; }
+}
+
+.search-bar {
+  .search-input {
+    max-width: 400px;
+    border-radius: 8px;
+    border: 1.5px solid #e9ecef;
+    &:focus {
+      border-color: #159947;
+      box-shadow: 0 0 0 3px rgba(21,153,71,0.12);
+    }
+  }
+}
+
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .filter-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .chip {
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1.5px solid #e9ecef;
+    background: #fff;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: #159947;
+      color: #159947;
+    }
+
+    &.active {
+      background: #159947;
+      border-color: #159947;
+      color: #fff;
+    }
+  }
+}
+
+/* ─── Header de pedidos ─── */
+.pedidos-header {
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #262626;
+  }
+
+  .page-subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0;
+  }
+
+  .btn-nueva {
+    background: #159947;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #0f7a38;
+    }
+  }
+}
+
+/* ─── Cards de pedidos ─── */
+.pedidos-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.pedido-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: #159947;
+  }
+
+  &.skeleton-card {
+    height: 90px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+  }
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.pedido-numero {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #159947;
+  min-width: 50px;
+}
+
+.pedido-contenido {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pedido-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pedido-cliente,
+.pedido-camion {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cliente-icon,
+.camion-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.cliente-nombre {
+  font-weight: 600;
+  color: #262626;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.camion-nombre {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.pedido-secundario {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pedido-fecha {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.pedido-acciones {
+  flex-shrink: 0;
+}
+
+.btn-ver-detalle {
+  background: transparent;
+  border: 1.5px solid #e9ecef;
+  color: #6b7280;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #159947;
+    color: #159947;
+    background: rgba(21,153,71,0.04);
+  }
+}
+
+/* ─── Badge estado ─── */
+.badge-estado {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+
+  &.pendiente {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.aprobado {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  &.entregado {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &.rechazado {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+}
+
+/* ─── Empty state ─── */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: #6b7280;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
 }
