@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: lambert-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: cd Lambert-app-back-main && npm install && npm run build
+    startCommand: cd Lambert-app-back-main && node dist/index.js
+    rootDir: Lambert-app-back-main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SECRET_JWT_KEY
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: http://localhost:4200
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lambert-db
+          property: connectionString
+    healthCheckPath: /api/health
+
+databases:
+  - name: lambert-db
+    plan: free
+    region: oregon
+    ipAllowList: []
