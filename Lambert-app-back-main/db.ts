@@ -4,10 +4,14 @@ import { DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT } from './config';
 
 const { Pool } = pkg;
 
+// Supabase y Railway requieren SSL
+const isProduction = process.env.NODE_ENV === 'production';
+
 export const pool = new Pool({
   user: DB_USER,
   host: DB_HOST,
   database: DB_NAME,
   password: DB_PASSWORD,
   port: DB_PORT,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
 });
