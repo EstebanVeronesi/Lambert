@@ -1,11 +1,8 @@
-// db.ts - Conexión a PostgreSQL con configuración centralizada
+// db.ts - Conexión a PostgreSQL
 import pkg from 'pg';
 import { DB_USER, DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT } from './config';
 
 const { Pool } = pkg;
-
-// Supabase y Railway requieren SSL
-const isProduction = process.env.NODE_ENV === 'production';
 
 export const pool = new Pool({
   user: DB_USER,
@@ -13,5 +10,6 @@ export const pool = new Pool({
   database: DB_NAME,
   password: DB_PASSWORD,
   port: DB_PORT,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 10000,
 });
