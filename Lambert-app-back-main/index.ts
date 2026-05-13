@@ -19,14 +19,7 @@ const allowedOrigins = CORS_ORIGIN.split(',').map((origin) => origin.trim());
 // Middlewares globales
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Permitir requests sin origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error('Origen no permitido por CORS'));
-    },
+    origin: process.env.NODE_ENV === 'production' ? true : allowedOrigins,
     credentials: true,
   })
 );
