@@ -41,6 +41,18 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/usuarios', usersRoutes);
 app.use('/api/clientes', clientesRoutes);
 
+// Endpoint de diagnóstico (solo para debug)
+app.get('/api/health', async (_req, res) => {
+  try {
+    const { pool } = await import('./db');
+    const result = await pool.query('SELECT COUNT(*) FROM users');
+    res.json({ status: 'ok', users: result.rows[0].count, db: 'connected' });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ status: 'error', message, db: 'disconnected' });
+  }
+});
+
 // Iniciar el servidor (solo en entornos tradicionales, no en Vercel serverless)
 if (!process.env.VERCEL) {
   const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
